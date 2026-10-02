@@ -1,128 +1,59 @@
 ---
 name: pxkit-conventions
-description: The pxkit house style for TypeScript, React, and Next.js — naming, components, hooks and state, services and Result/ErrorKey boundaries, data shaping, styling with shadcn/ui and Tailwind, structure, and testing. Use this whenever you write, edit, refactor, or review any .ts/.tsx file — a component, hook, service, server action, route handler, type, or stylesheet — even for a "small" change or when the user does not mention conventions. Also use it when the user asks whether code "follows the house style" or "matches the repo".
+description: The pxkit house style for TypeScript, React, and Next.js — readability red lines, NASA's Power of Ten rules adapted to TypeScript, naming and types, components and styling with shadcn/ui and Tailwind, hooks and state. Use this whenever you write, edit, refactor, or review any .ts/.tsx file — a component, hook, service, server action, route handler, type, or stylesheet — even for a "small" change or when the user does not mention conventions. Also use it when the user asks whether code "follows the house style" or "matches the repo".
 ---
 
 # pxkit Conventions
 
-The house style, condensed. Full rules with examples live in this skill's `references/` directory.
+The rules in this file apply to every line of code. Each topic rule is written in exactly one place; the table at the end says where.
 
 ## Red lines
 
-Everything else in this skill is judgment. These are not.
+- **Traceability budget: two files.** A reader understands a function or component by opening at most two other files. Shared infrastructure the whole repo uses (`Result`, the `http` client, `env`, `cn`, error copy, UI primitives) doesn't count. Over budget means the structure is wrong: inline it, colocate it, or pass the data directly.
+- **Duplication over the wrong abstraction.** Two similar blocks are fine. A function that needs a flag, an options bag, or a type parameter to serve two callers is two functions. Moving existing code to a shared file when a second file imports it is fine; unifying similar code into a new abstraction waits for the third identical case.
+- **Simple over clever.** If a reviewer has to think to see that it works, rewrite it.
+- **Written for humans.** Names say the business meaning (`isEligibleForRenewal`, not `flag2`). Comments say why, never what. A file reads top-down: the exported thing first, the private pieces it uses below it.
 
-- **Traceability.** A reader must understand what a function or component does by opening at most two other files. If it takes 3–4 jumps, the structure is wrong: inline it, colocate it, or pass the data directly.
-- **Flat call stacks.** Page → section → primitive. Component → hook → service → boundary. No pass-through wrappers, no helper that only calls another helper, no prop drilled past one intermediate.
-- **One concept, one file.** Everything only one file uses lives in that file: a component's props interface, its local sub-components, its constants, its variant map, its 3-line helper. Move a thing out only when a second file imports it. A reader gets the full picture from one file, not from five 10-line files.
-- **Duplication over the wrong abstraction.** Two similar blocks of code are fine. A shared function that needs a flag, an options bag, or a generic parameter to serve two callers is two functions. Sharing and abstracting are different moves: a thing that already exists moves to a shared file the moment a second file imports it; *unifying* similar code into a new abstraction waits for the third identical case.
-- **Simple over clever.** The obvious solution beats the elegant one. If a reviewer would need to think to see that it works, rewrite it so they don't.
-- **Written for humans.** Names say what the value is in business terms (`isEligibleForRenewal`, not `flag2`). Comments explain *why*, never restate *what* the code already says. No comment is better than a comment that repeats the line below it.
+## NASA's Power of Ten, for TypeScript and React
 
-## How to work with this skill
+Gerard Holzmann's rules for safety-critical code at NASA/JPL, adapted from C. Where a rule doesn't translate literally, the adaptation keeps its purpose: code you can verify by reading it.
 
-1. **Inspect the repo before writing.** Layout (route-colocated vs `features/`), path aliases, UI layer, test runner, and the shared layers already in place: `http` client, `Result` type, error-key union, `format*` helpers. Match what exists; a second copy of a shared layer is worse than either copy alone. When a rule here says "the project's …", the repo wins over any example path.
-2. **Read the topic reference before touching that area.** The cheat sheet orients; the reference has the exact shape, the examples, and the exceptions.
+1. **Simple control flow.** Guard clauses and early returns; the happy path stays unindented and there is no `else` after a `return`. No nested ternaries. No recursion except over data that is itself a bounded tree. Exceptions signal programmer errors, never control flow.
+2. **Every loop, retry, and wait has a fixed bound.** No `while (true)`. A retry has a max attempt count, polling has a stop condition, every request has a timeout, a page-walking loop has a max page count.
+3. **Build once, then don't mutate.** What never changes (`Intl` formatters, zod schemas, lookup maps) is created once at module scope, not per call or per render. Shared data is never mutated: copy, then change (`[...rows].sort(...)`). No module-level `let`.
+4. **A function fits on one screen: 60 lines at most**, components included. Split a longer one by responsibility into private pieces in the same file. Files have no limit; one long cohesive file reads better than five short ones.
+5. **Check assumptions in code, not in comments.** Untrusted input (request bodies, API responses, URL params, storage) is parsed with zod before use. An invariant is a guard that throws a developer-facing message. A `switch` over a union ends in an exhaustive `never` check.
+6. **Declare everything at the smallest scope.** A value lives in the block that uses it; a helper, type, or constant in the file that uses it; state in the lowest component that owns it; a file in the feature that uses it. Promote one level only when a second consumer appears.
+7. **Check every return value.** Read `result.data` only after `if (!result.ok)`. No floating promises; a promise deliberately not awaited is marked `void`.
+8. **No metaprogramming.** No decorators, no `eval` or `new Function`, no behavior looked up by a string built at runtime (``handlers[`on${event}`]``). No `as` casts except `as const`: narrow with a check or a schema; if a library type forces a cast, comment why. Conditional and mapped types only where a declared type can't express the shape.
+9. **One level of indirection.** Call the function you mean. No factories that return functions (`createHttp(config)`), no higher-order functions or components that wrap behavior (`withAuth(handler)`), no barrel files, no re-exports: import every symbol from the file that defines it. Passing a callback one level (`onSelect`, `rows.map(parseRow)`) is fine. The one allowed re-export adds a directive the source lacks (`components/motion.tsx` adding `'use client'`).
+10. **Zero warnings.** TypeScript `strict`, no `any`, no `@ts-ignore`; a lint disable carries a comment saying why. The repo's `typecheck`, `lint`, and `test` scripts pass before work is called done.
 
-   | You are about to… | Read first |
-   | --- | --- |
-   | plan a change, decide scope, define done criteria | `core-principles` |
-   | create or rename files, identifiers, error keys | `naming`, `errors` |
-   | write a component or restructure a tree | `components`, `ui-composition`, `styling`, `icons`, `ui-ux` |
-   | write a hook, manage async/server state, add a context | `hooks-state`, `typescript`, `optimistic-ui` |
-   | build a form | `forms` (or the `pxkit-form` skill) |
-   | call an API / DB / SDK, add an action or route handler | `services`, `errors`, `data` (or `pxkit-service`) |
-   | add a page, route group, metadata, or client boundary | `nextjs` (or `pxkit-nextjs-page`) |
-   | scaffold a feature folder or package | `structure` (or `pxkit-feature`) |
-   | write or place tests | `testing` |
-   | review a diff | `review-checklist` |
+## How to work
 
-3. **Plan, then confirm.** State the approach as verifiable targets and a surgical change set with an explicit out-of-scope list. Wait for confirmation. Ask when the request is ambiguous instead of picking an interpretation.
-4. **Self-review before reporting done.** Run the repo's `typecheck`, `lint`, and `test` scripts, then walk `references/review-checklist.md` over your own diff.
+1. **Inspect the repo first.** Layout, path aliases, UI layer, test runner, and the shared layers already present (`http`, `Result`, error copy, `format*` helpers). Match them; a second copy of a shared layer is worse than either. The repo wins over any example path here.
+2. **Plan, then confirm.** Restate the task as verifiable targets, list the files that change and what is out of scope, and wait for confirmation. Ask when the request is ambiguous, say "I don't know" rather than guess, and push back when a simpler approach exists.
+3. **Read the rule file for the area** (table below) before writing in it.
+4. **Make surgical changes.** Every changed line traces to the request. Leave neighboring code alone.
+5. **Self-review.** Run the repo's `typecheck`, `lint`, and `test`, then walk `references/review-checklist.md` over your diff.
 
-## Cheat sheet
+## Tests
 
-### Process
+- Use the repo's runner (Vitest + Testing Library when none is set). A test sits next to the file it tests (`invoice.test.ts`).
+- Test decisions (parsers, calculators, query builders), not component wiring. `describe('<subject>')` + `it('should …')`.
+- Keep decisions (pure functions) apart from actions (I/O, state, toasts) so a decision tests without mocks. A decision stays in the file that uses it; it moves to the feature's `lib/` when it needs its own tests or a second consumer.
+- Formatting follows the repo; when unset: single quotes, semicolons, 2-space indent.
 
-- Plan before coding; turn vague asks into verifiable targets; confirm the approach.
-- Minimum code that solves the problem. No speculative abstractions, no flexibility nobody asked for.
-- Surgical diffs. Every changed line traces to the request; neighboring code is left alone.
-- Say "I don't know" instead of guessing. Push back when a simpler approach exists.
+## Where each rule lives
 
-### Naming & files
-
-- kebab-case for every filename, components included. One public *concept* per file: a component with its compound parts, or a hook; the filename mirrors the main export. The file also holds every private thing only it uses.
-- `.tsx` if and only if the file contains JSX.
-- camelCase variables and functions; PascalCase components and types. Booleans read `is/has/should`; internal handlers `handle*`; callback props `on*`.
-- **No barrel files, no re-export middlemen.** Never create an `index.ts` that only re-exports, and never import a symbol into a file just to export it again so consumers import it from there. Import the defining file directly, via the project's alias. The one exception is a re-export that adds a directive the source lacks (`components/motion.tsx` adding `'use client'`).
-
-### Components
-
-- Named arrow-function `const` with a named export. **No default exports** except Next.js file conventions (`page.tsx`, `layout.tsx`, `sitemap.ts`).
-- Props: a declared `interface <Component>Props` (no `I` prefix), destructured in the signature; local helper components declare theirs too. Only what the component reads: two fields, not the whole entity. `children: React.ReactNode`.
-- Compound components are flat named exports from one file (`Card`, `CardHeader`), never `Card.Header` statics.
-- Data-driven rendering: content in typed `as const` arrays, mapped to markup.
-- Compose via `children`/slot props, read data where it is used, lift state only to the lowest common owner.
-- `memo`/`useMemo`/`useCallback` only for measured hot paths; skip them entirely in React Compiler projects.
-
-### Hooks & state
-
-- Hooks return an object, never a tuple. A multi-state async flow exposes `status` plus only the derived flags call sites read; a single in-flight flag (`isPending` from a transition) needs no `status`.
-- Local async state is **one `status` union in one `useState`** (`'idle' | 'loading' | 'success' | 'error'`); discriminated-with-payload only when `data`/`errorKey` must be tied to the state. Never parallel `isLoading`/`isError` booleans; never a stored boolean that could be derived.
-- Failures carry an `errorKey`, never a message string.
-- **Server state lives in a query cache (TanStack Query)**, never `useState` + `useEffect` + `fetch`. Live updates are `refetchInterval` / `invalidateQueries` / socket `setQueryData`, never a hand-rolled `setInterval`.
-- Never mirror a server prop into `useState` without reconciliation. Context via a `createSafeContext` factory that throws without a provider.
-
-### TypeScript
-
-- `interface` for object shapes; `type` for unions and aliases. **Never inline a type definition**: object shapes and unions get a named `interface`/`type` declared above their first use, never `({ a }: { a: string })` or `useState<'idle' | 'loading'>()`; composing declared names inline (`Result<Invoice, InvoiceErrorKey>`) is fine. String-literal unions or `as const` + `keyof typeof`, never `enum`.
-- Derive, don't restate: `z.infer`, `ReturnType`, `keyof typeof`, `Pick`. Annotate only real contracts (params, exported signatures, a mapper's domain return); let obvious consts and returns infer.
-- `unknown` over `any`. Model invalid states out (Draft vs Saved shapes, status unions).
-- Array syntax follows the repo (`T[]` or `Array<T>`); never churn-rewrite it. JSDoc only where the contract isn't obvious from the signature.
-
-### Styling & UI
-
-- Tailwind v4 (or the repo's established utility system). No inline styles. All class merging through `cn()`.
-- Semantic tokens (`bg-muted`, `text-primary`), never arbitrary hex or raw palette colors; no manual `dark:` overrides.
-- Customization ladder, stop at the first that works: built-in variant → `className` for layout only → token → new variant in the component source → wrapper.
-- `gap-*` over `space-*`; `size-*` over `w-`/`h-` pairs; `truncate`; no manual z-index on overlays; hoist repeated class strings to local consts.
-- Base UI is **shadcn/ui** when the project uses it, added via the CLI, never hand-written or swapped for another library. Use the full composition API (Card = Header/Content/Footer; items inside their Group; `TabsTrigger` inside `TabsList`). Existing primitive over custom markup (`Separator`, `Skeleton`, `Badge`, `Alert`).
-- Dialog/Sheet/Drawer always get a Title (`sr-only` is fine). `Avatar` always has `AvatarFallback`.
-- Forms: `FieldGroup` → `Field` → `FieldLabel` + control; `FieldSet` + `FieldLegend` for groups; `InputGroup` + `InputGroupAddon` for buttons in inputs; `ToggleGroup` for 2–5 option sets. Never raw `div` + `space-y-*`.
-- Icons: import directly from the project's icon library; pass component objects, not string keys; no sizing classes on icons inside components that size their own.
-- A11y always: `focus-visible:`, `sr-only`, `aria-hidden` on decoration, ARIA labels on icon-only triggers, `role="alert"` on error output.
-- Reuse existing patterns, tokens, and layouts before inventing. Hierarchy tracks importance; spacing comes from the scale; responsive behavior is explicit per breakpoint. Design the full journey: hover/focus/active/disabled, loading, empty, error, success.
-
-### Next.js
-
-- Server Components by default; `'use client'` at the leaves only, centralized in re-export files (`components/motion.tsx`) rather than scattered.
-- Pages are thin `export default function` server components composing named `<Section />` components. Route groups `(folder)` by domain, each with its own `layout.tsx`.
-- Metadata: root layout owns `metadataBase` and the title template; pages export bare `title` + `description` + `openGraph` + `twitter` + `alternates.canonical`, via a `createPageMetadata(config)` factory for repeated route families.
-- Env through one typed, zod-validated `env.ts`; never `process.env` in feature code.
-
-### Boundaries, errors, data
-
-- Every external call lives in a service returning the shared `Result<T, K>` (`{ ok: true, data } | { ok: false, errorKey, meta? }`), `K` narrowed to that operation's keys. **Services never throw to the UI.**
-- Every fetch goes through **one shared `http` client** (`lib/http.ts`) that owns base URL, auth headers, JSON, timeout, and status → `errorKey` mapping. A service names the endpoint, narrows the keys, and maps the DTO; it never re-types `fetch` + headers + `try/catch`.
-- Vendor DTOs stop at the service file. Parse wire values to domain types **once** in the mapper (`parseInvoice`: strings → `Date`/`number`/unions); nothing downstream re-parses.
-- Format at the edge with pure `format*` helpers (`Intl.*` built once at module scope), never in the service, never inlined in JSX.
-- Search/sort/paginate server-side when the API supports it (tested `buildQuery(filters)`); client-side only for small in-memory lists, as pure `lib/` functions composed in a derivation (plain expressions under React Compiler, `useMemo` otherwise). The pager total is `filtered.length`, never a stored counter.
-- **Errors are codes, not sentences.** `errorKey` is a SCREAMING_SNAKE literal from the string-literal `ErrorKey` union. Shared keys are transport/session only (`NETWORK`, `TIMEOUT`, `UNAUTHORIZED`, `RATE_LIMITED`); everything else is feature-prefixed and **named by reason when known** (`INVOICE_NOT_FOUND`), with the operation catch-all (`INVOICE_FETCH_FAILED`) only for unknown reasons.
-- Status and exception mapping happen once, in `errorKeyFromResponse` / `errorKeyFromException`. `meta` carries interpolation values only. Copy resolves at render time (``t(`errors.${errorKey}`, meta)`` or an exhaustive `Record<ErrorKey, string>`); no hardcoded user-facing error strings anywhere.
-- Guard clauses and early returns over `else` mazes. `try/catch` at I/O with `console.error('Error in <fn>::', error)`; raw error details stop at the log.
-- Optimistic UI only for predictable, reversible, low-stakes writes, via `useOptimistic` + `useTransition` in one shared hook; destructive, money/permission, and server-decided actions render `isPending` and wait.
-
-### Structure & testing
-
-- Feature modules colocated in the app by default (route folder or `features/<name>/`, whichever the repo uses); a shared package only for 2+ consumers.
-- Responsibility-based dirs: `components/`, `hooks/`, `actions/`, `services/`, `types/`, `constants/`, `lib/`. Create a directory only when a file exists for it. `types/`, `constants/`, and `lib/` hold what 2+ files share; a type, constant, or helper with one consumer stays in that consumer's file.
-- Separate decisions from actions: pure logic in `lib/` with colocated `*.test.ts`; thin shells (hooks, actions, services) call it. Use the repo's test runner (Vitest + Testing Library when none is set).
-
-## Reviewer rejects on sight
-
-- No barrel `index.ts`; no file that imports a symbol only to re-export it; no default exports outside Next.js file conventions; no PascalCase filenames.
-- No `any`; no `enum`; no inline type literal where a declared `interface`/`type` belongs; no parallel async booleans; no server data in `useState` + `fetch`.
-- No raw `fetch` in a service when a shared `http` client exists; no service that throws to the UI; no vendor DTO type imported outside its service.
-- No hardcoded user-facing error strings; no error key that is a sentence; no `process.env` outside `env.ts`.
-- No inline styles, arbitrary hex, or manual `dark:` overrides; no raw-div form markup when Field primitives exist.
-- No helper, wrapper, or abstraction with a single caller; no type, constant, or helper moved to its own file while only one file uses it; no comment that restates the code; no change that requires 3+ file jumps to follow.
-- No code before the plan is confirmed; no changed line that doesn't trace to the request.
+| You are about to… | Read |
+| --- | --- |
+| name files or identifiers, write types | `references/typescript.md` |
+| write or restyle a component, pick a UI primitive, add a client boundary | `references/components.md` (the `pxkit-component` skill to design a new one) |
+| write a hook, hold state, derive a list view, add optimistic UI or context | `references/state.md` |
+| build a form | the `pxkit-form` skill |
+| call an API, DB, or SDK; add a server action or route handler; add error keys | the `pxkit-service` skill |
+| add a page, route, layout, or metadata | the `pxkit-nextjs-page` skill |
+| start a feature, create a feature folder or package | the `pxkit-feature` skill |
+| investigate a bug | the `pxkit-debug` skill |
+| review a diff | `references/review-checklist.md` |

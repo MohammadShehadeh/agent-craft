@@ -1,58 +1,75 @@
 ---
 name: pxkit-feature
-description: Scaffold or extend a feature module the pxkit way — colocated route or feature folder by default, responsibility-based directories, direct imports, and a shared package only when 2+ consumers exist. Use whenever the user asks to add a feature, module, domain area, "section of the app", or to add hooks/actions/services to an existing one, and whenever a task would create a new folder under app/, features/, or packages/ — even if they don't say "feature".
+description: Plan and build a feature the pxkit way — user journey and business rules first, a flat component tree, an explicit state and communication map, then a colocated feature folder with direct imports, and a shared package only when 2+ consumers exist. Use whenever the user asks to add a feature, module, domain area, or "section of the app", or to add hooks, actions, or services to an existing one, and whenever a task would create a new folder under app/, features/, or packages/, even if they don't say "feature".
 ---
 
-# pxkit Feature Module
+# pxkit Feature
 
-How a feature is structured and where it lives. Full detail in [references/structure.md](references/structure.md). Load `pxkit-conventions` for everything inside the module (components, hooks, boundaries, errors).
+How a feature is planned, where it lives, and how its folder is laid out. Load `pxkit-conventions` for the rules inside each file.
 
 ## Gates
 
-- **No files before step 1 is answered from the repo.** A second layout pattern in one repo costs every reader forever.
-- **No package for a single consumer.** Colocated code can be extracted later; a package is a build and versioning commitment.
-- **No `index.ts` anywhere in the module.** A barrel turns "where is this defined" into a two-jump question.
-- **No `lib/` helper, `types/` entry, or `constants/` entry with a single consumer.** It stays in the file that uses it until a second file imports it.
-- **Present the layout (step 2) before creating files** for a new feature. Wait for confirmation.
+- **No code before the plan (steps 1–3) is confirmed.**
+- **No files before the home (step 4) is answered from the repo.** A second layout pattern in one repo costs every reader.
+- **No package for a single consumer.**
+- **No `types/`, `constants/`, or `lib/` file with a single consumer.** It stays in the file that uses it.
 
-## 1. Pick the feature's home
+## 1. Journey and business rules
 
-Inspect the repo and match its existing pattern (a sibling feature's path, the alias config, the workspace config):
+- Walk the user journey step by step: what the user sees, does, and expects at each point, including loading, empty, and failure. "A Gmail-like inbox" becomes: scan the list → open a message → read → reply, archive, or delete → back to the list.
+- Pull out the business rules behind each step (what marks a message read, who can archive, what orders the list). These are pure decisions and get tests.
+- Restate both as verifiable targets: behaviors, inputs and outputs, error keys.
+- Search for what exists: similar features, services, hooks, primitives. Extend before duplicating; duplicate a small pure thing rather than reach into another feature's files.
+- Ask about anything ambiguous.
+
+## 2. Component tree
+
+Outline top-down, build bottom-up:
+
+- **Pages**: one per journey destination (`/inbox`, `/inbox/[messageId]`), thin server components.
+- **Sections**: one per journey step or screen region (`MessageList`, `ThreadView`, `ComposePanel`).
+- **Primitives**: the existing UI layer first; a new one only when nothing fits.
+
+Page → section → primitive, nothing in between that only forwards props. Name every unit by business meaning (`MessageRow`, not `ListItem2`) and note what data each renders.
+
+## 3. State and communication
+
+For every piece of state, write down:
+
+- **Owner**: the lowest common owner of what reads it. Selected message → the URL param; a row's hover → the row.
+- **Server or client**: server data is fetched where it's used or held in the query cache, never copied into `useState`.
+- **Communication**: parent → child by props, child → parent by `on*` callbacks, siblings through their shared owner, cross-page through the URL, a subtree-wide concern through one context. Write the chains out: `MessageRow → onArchive → MessageList → archiveMessage action`.
+- **Optimistic or not**: reversible, low-stakes writes (archive, star) are optimistic; destructive or server-decided ones wait.
+
+**Present steps 1–3 as the plan**, with the files that change and an out-of-scope list. Wait for confirmation.
+
+## 4. Home
 
 | Situation | Home |
 | --- | --- |
-| **Default** — single app, one consumer | **Feature-colocated** — route folder under `app/` *or* `src/features/<name>/`, whichever the repo already uses |
-| Shared by 2+ apps or versioned independently | **Package** — npm package or monorepo workspace member |
+| Default: one app uses it | The route folder under `app/`, or `features/<name>/`, whichever the repo already uses |
+| Two or more apps use it, or it ships on its own version | A package |
 
-## 2. Layout — create only what you need
+## 5. Folder layout
 
 ```
-<feature-home>/
-  components/   # arrow-const components, kebab-case files
-  hooks/        # use-*.ts — logic only; object returns with status + errorKey
-  actions/      # 'use server' — return { ok, data | errorKey }
-  services/     # external calls, DTO → internal mapping
-  types/
-  constants/    # error-keys.ts, config.ts (as const + keyof typeof)
-  lib/          # pure logic — colocate *.test.ts here
+<feature>/
+  components/   # JSX
+  hooks/        # use-*.ts, only when two components share one
+  actions/      # 'use server' mutations
+  services/     # reads and shared I/O
+  lib/          # schemas and decisions shared by 2+ files, or that need their own tests
 ```
 
-Add a directory only when a file exists for it.
+- One level deep. A directory exists only when a file lives in it.
+- Types, constants, and error keys live in the file that uses or produces them. A `types/` or `constants/` directory appears only for things two files share.
+- Consumers import the defining file through the repo's alias (`@/features/upload/components/dropzone`). There is no `index.ts` and no "public" layer.
+- Code another feature needs moves to a shared top-level folder; a feature never imports another feature's internals.
+- Two known cases are a `switch` or a lookup map. A plugin-style registry only when outside code must register new cases.
 
-## 3. Imports
+## 6. Package — only when extracted
 
-Consumers import the **defining file** via the project's path alias:
-
-```ts
-import { useUploadFile } from '@/features/upload/hooks/use-upload-file';
-import { Dropzone } from '@/features/upload/components/dropzone';
-```
-
-Other features import these files directly too; there is no second, "public" layer. Cross-feature logic goes to a shared layer, not into another feature's folder.
-
-## 4. Package boundary — only when extracted
-
-When the feature becomes a shared package, expose wildcard per-file subpath exports so every file stays individually importable with no barrel:
+Same layout, plus per-file wildcard exports so nothing needs a barrel:
 
 ```jsonc
 {
@@ -61,26 +78,19 @@ When the feature becomes a shared package, expose wildcard per-file subpath expo
   "sideEffects": false,
   "exports": {
     "./components/*": { "types": "./dist/components/*.d.ts", "default": "./src/components/*.tsx" },
-    "./hooks/*":      { "types": "./dist/hooks/*.d.ts",      "default": "./src/hooks/*.ts" },
-    "./actions/*":    { "types": "./dist/actions/*.d.ts",    "default": "./src/actions/*.ts" }
+    "./hooks/*": { "types": "./dist/hooks/*.d.ts", "default": "./src/hooks/*.ts" },
+    "./actions/*": { "types": "./dist/actions/*.d.ts", "default": "./src/actions/*.ts" }
   }
 }
 ```
 
-Wildcards resolve one extension per directory: `hooks/`, `actions/`, `services/`, `lib/` stay `.ts`; JSX lives only in `components/`. Follow the repo's package naming, build output paths, and workspace conventions; do not introduce a monorepo layout into a single-package app.
+A wildcard resolves one extension per directory: JSX only in `components/`, everything else `.ts`. Follow the repo's workspace and naming conventions; don't introduce workspaces into a single-package repo.
 
-## 5. Patterns inside the module
+## 7. Verify
 
-- Compose the project's shared UI layer; never redefine base primitives.
-- User-facing copy via the project's i18n (or an exhaustive key → string map); failures as SCREAMING_SNAKE `ErrorKey` literals from `constants/error-keys.ts` (`pxkit-conventions`: `errors` rule).
-- Two known cases: a lookup map or `switch`. A registry (definitions → Map → factory → renderer) only at 3+ interchangeable variants or when external code must register them.
-- Cross-cutting API checks: higher-order wrappers (`export const POST = withAuth(handleCreateOrder)`) when the repo already uses that pattern.
-- Everything else per `pxkit-conventions`.
-
-## 6. Verify
-
-- `rg --files <feature-home> | rg "index\.ts$"` returns nothing.
-- `rg "export default" <feature-home>` matches only Next.js file conventions.
-- `rg --files <feature-home>` shows only kebab-case names and no empty directories.
-- Any file in the module can be understood by opening at most two other files.
-- The repo's `typecheck`, `lint`, and `test` scripts pass.
+- Every journey step from step 1 works, including loading, empty, and failure.
+- `rg --files <feature> | rg "index\.ts$"` returns nothing.
+- `rg "export default" <feature>` matches only Next.js file conventions.
+- Pick any file in the feature: it can be understood by opening at most two other files.
+- The repo's `typecheck`, `lint`, and `test` scripts pass, including tests for the business rules from step 1.
+- Every changed line traces to the plan.

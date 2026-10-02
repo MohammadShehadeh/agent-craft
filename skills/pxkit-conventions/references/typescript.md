@@ -1,48 +1,43 @@
-# TypeScript
+# Naming & TypeScript
 
-## interface vs type
+## Files
 
-- `interface` for object shapes (props, state, DTOs). `type` for unions, aliases, and function-derived types.
-- Props interfaces are named `<Component>Props` — no `I` prefix, no `Props` alone.
-- **Never inline a type definition; always declare it.** Object shapes and unions are declared as a named `interface`/`type` above their first use, then referenced — never `({ a, b }: { a: string; b: number })`, never `useState<'idle' | 'loading'>()`. Composing *declared* names inline is fine (`Result<Invoice, InvoiceErrorKey>`, `ContextValue | null`, `Record<string, unknown>`); writing out a new shape inline is not. A declared name says what the shape *is*; an inline literal makes the reader rebuild it from the fields every time it appears, and the second use of the same shape copies it instead of reusing it.
+- kebab-case for every filename, components included: `submit-button.tsx` exports `SubmitButton`, `use-countdown.ts` exports `useCountdown`. The filename mirrors the main export.
+- One public concept per file: a component with its compound parts, a hook, or a service. Everything private to that concept stays in the file.
+- `.tsx` if and only if the file contains JSX.
+- No file named for a category instead of a job: `utils.ts`, `helpers.ts`, `common.ts`, `misc.ts`. Name the file for what it does (`format.ts`, `invoice-filters.ts`).
+
+## Identifiers
+
+- camelCase for values and functions; PascalCase for components, types, and interfaces. No `I` prefix.
+- Booleans read as questions: `isLoading`, `hasNewStep`, `shouldBlock`.
+- Internal event handlers are `handle*` (`handleFileSelect`); callback props are `on*` (`onUploadComplete`).
+- Name the business meaning, not the technical accident: `calculateDiscount`, `isEligibleForRenewal`, not `doAction`, `checkFlag2`, `processData`, `manager`.
+
+## Declaring types
+
+- `interface` for object shapes; `type` for unions and aliases. Props are `interface <Component>Props`.
+- **Declare, don't inline.** A new object shape or union gets a name above its first use, then is referenced. Never `({ a }: { a: string })`, never `useState<'idle' | 'loading'>()`. Composing declared names inline is fine: `Result<Invoice, InvoiceErrorKey>`, `Pick<User, 'id' | 'name'>`.
+- String-literal unions, or an `as const` object with `keyof typeof` when the values carry data. Never `enum`.
 
 ```ts
-interface SearchInputProps {
-  placeholder: string;
-  onSearch: (query: string) => void;
-}
+const uploadLimits = {
+  image: { maxSizeMb: 5, accept: ['image/png', 'image/jpeg'] },
+  document: { maxSizeMb: 20, accept: ['application/pdf'] },
+} as const;
 
-type Status = 'idle' | 'loading' | 'success' | 'error';
+type UploadKind = keyof typeof uploadLimits;
 ```
 
-## Make invalid states boringly hard
+- **Derive, don't restate.** A shape that exists somewhere is derived from it: `z.infer<typeof schema>`, `keyof typeof`, `ReturnType`, `Pick`, `Omit`. A second hand-written copy drifts.
+- **Annotate contracts, infer the rest.** Write types on parameters, exported signatures, and a parser's return (so a wrong field errors at the boundary). Let initialized consts and obvious returns infer. Annotate empty-array seeds and literals that would widen.
 
-- Model lifecycle as **one `status` union in a single state value** — booleans are derived from it, never stored beside it. Default to the bare union; escalate to a discriminated union only when the payload must be tied to the state:
+## Making invalid states unrepresentable
 
-```ts
-// Bad — 8 combinations, most of them invalid
-const [isLoading, setIsLoading] = useState(false);
-const [isError, setIsError] = useState(false);
-const [isSuccess, setIsSuccess] = useState(false);
-
-// Good (default) — one bare union, declared once
-type Status = 'idle' | 'loading' | 'success' | 'error';
-const [status, setStatus] = useState<Status>('idle');
-
-// Escalate only when data/errorKey must be tied to the state
-type State =
-  | { status: 'idle' | 'loading' }
-  | { status: 'success'; data: Report }
-  | { status: 'error'; errorKey: ErrorKey }; // typed keys — see errors.md
-const [state, setState] = useState<State>({ status: 'idle' });
-```
-
-- Split entity shapes by lifecycle stage instead of making everything optional:
+- Async lifecycle is one `status` union, never parallel booleans (details in `state.md`).
+- Split entity shapes by lifecycle stage instead of making fields optional:
 
 ```ts
-type UserRole = 'admin' | 'member';
-type UserStatus = 'active' | 'disabled';
-
 interface DraftUser {
   email: string;
   role: UserRole;
@@ -56,47 +51,14 @@ interface SavedUser {
 }
 ```
 
-## Unions and constants over enums
-
-- String-literal unions for local domains (`type Placement = 'top' | 'bottom'`).
-- For fixed token sets, use a `const` object + `as const` and derive the type — not `enum`:
+- `unknown` for open values, narrowed with a type guard or a zod schema. Never `any`.
 
 ```ts
-export const uploadConfig = {
-  image: { maxSizeMb: 5, accept: ['image/png', 'image/jpeg'] },
-  document: { maxSizeMb: 20, accept: ['application/pdf'] },
-} as const;
-
-export type UploadKind = keyof typeof uploadConfig;
-```
-
-## Derive, don't restate
-
-- Lean on utility types to derive from the source of truth: `keyof typeof`, `ReturnType<typeof useSearch>`, `Required<>`, `Omit<>`, `z.infer<typeof schema>`. Never hand-copy a shape that already exists somewhere else:
-
-```ts
-const searchSchema = z.object({
-  query: z.string().min(1),
-  page: z.number().int().positive(),
-});
-type SearchParams = z.infer<typeof searchSchema>; // never retyped by hand
-```
-
-- **Prefer inference over annotation — write the type only where it's a contract.** Don't restate what TS already infers: an initialized `const`, a callback parameter typed by its caller, a function whose return is obvious from its body. Annotate the things that *pin a contract* — function parameters, exported/boundary signatures, the domain shape a DTO mapper returns (so a wrong field errors at the mapper, not downstream) — and the spots where inference widens wrong (`as const`, an empty-array seed). Fewer types written, checked exactly as hard.
-- `unknown` (never `any`) for open values: `Record<string, unknown>`. If `any` is truly unavoidable, disable the lint rule on that line with a comment saying why.
-- Write type guards for narrowing instead of casting:
-
-```ts
-export function isNotNull<T>(value: T | null): value is T {
-  return value !== null;
-}
-
-const activeUsers = users.filter(isNotNull);
+export const isNotNull = <T>(value: T | null): value is T => value !== null;
 ```
 
 ## Misc
 
-- **Array syntax follows the repo.** `T[]` or `Array<T>` — match whatever the codebase already uses; never rewrite one into the other. It's a lint-autofix preference, not a convention, and flipping it repo-wide is pure churn.
-- `readonly` on props/params where immutability is intended.
-- Strict mode always (`strict: true`, `noExplicitAny` as an error).
-- JSDoc exported functions/services where the contract isn't obvious from the signature — never `@param`/`@returns` lines that restate what the types already say.
+- Array syntax (`T[]` or `Array<T>`) follows the repo; never rewrite one into the other.
+- `readonly` where immutability is intended.
+- JSDoc only where the signature doesn't already say it; no `@param` lines restating the types.

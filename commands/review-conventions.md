@@ -1,8 +1,8 @@
 ---
-description: Review the current diff (or given files) against the house conventions and report violations
-argument-hint: [files or leave empty for working diff]
+description: Review the current diff (or given files) against the pxkit conventions and report violations
+argument-hint: [files, or empty for the working diff]
 ---
 
-Review against house conventions: $ARGUMENTS (default: the current working diff via `git diff` + `git diff --staged`; fall back to the last commit if clean).
+Review against the pxkit conventions: $ARGUMENTS (default: `git diff` + `git diff --staged`; if both are empty, the last commit).
 
-Load the `pxkit-conventions` skill, then read `${CLAUDE_PLUGIN_ROOT}/skills/pxkit-conventions/references/review-checklist.md` and check each changed file against it — ground rules, check order, and output format all come from the checklist. Consult the topic rule files in the same `references/` directory when a finding needs the full rule.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/pxkit-conventions/references/review-checklist.md` and `${CLAUDE_PLUGIN_ROOT}/skills/pxkit-conventions/SKILL.md`, then only the other rule files the checklist names for the areas the diff touches. Follow the checklist's ground rules, check order, and output format.

@@ -1,52 +1,93 @@
 ---
 name: pxkit-nextjs-page
-description: Build a Next.js App Router page, route group, or landing section the pxkit way — a thin server page composing section components, client boundaries pushed to leaf re-export files, metadata through the root title template and a createPageMetadata factory, routes registered in one typed config. Use whenever the user asks for a new page, route, landing/marketing section, hero, pricing or about page, layout, route group, SEO metadata, or sitemap entry — even when they only say "add a page for X".
+description: Build a Next.js App Router page, route group, or landing section the pxkit way — a thin server page composing section components, client code only in leaves, metadata through the root title template and a buildPageMetadata function, routes registered in one typed config. Use whenever the user asks for a new page, route, landing or marketing section, hero, pricing or about page, layout, route group, SEO metadata, or sitemap entry, even when they only say "add a page for X".
 ---
 
 # pxkit Next.js Page
 
-Full detail in [references/nextjs.md](references/nextjs.md). Load `pxkit-conventions` for component, styling, and boundary rules. **Match the repo's** layout wrappers, routes config location, and path aliases before writing a line.
+Every Next.js routing and metadata rule lives here. Load `pxkit-conventions` for the rules that apply to all code; its `components.md` holds the server/client boundary rules.
 
 ## Gates
 
 - **The page file only composes sections.** No business logic, no markup beyond layout.
-- **No `'use client'` on a page or section.** A client page drags every section into the client bundle; interactivity lives in a leaf.
-- **No layout wrapper or section "base component" invented for one page.** Use the repo's container; otherwise plain `<section>`.
-- **No metadata block copy-pasted between sibling pages** once there are three; they go through the factory.
-- **No route added without registering it in the typed routes config** when the repo has one; nav and `sitemap.ts` derive from it.
+- **No layout wrapper or section base component invented for one page.** Use the repo's container, otherwise a plain `<section>`.
+- **No route added without registering it** in the repo's typed routes config, when it has one.
 
-## Recipe
+## 1. The page
 
-1. **Page = thin server component** (`export default function`, the one place a default export is allowed) composing named section components:
+A thin server component, `export default function` (Next.js requires the default export):
 
 ```tsx
-export default function Home() {
+// app/(marketing)/page.tsx
+export const metadata = buildPageMetadata({
+  title: 'Pricing',
+  description: 'Plans for every team size.',
+  path: '/pricing',
+});
+
+export default function PricingPage() {
   return (
     <>
-      <section><Hero /></section>
-      <section><WhatIDo /></section>
+      <section><PricingHero /></section>
+      <section><PricingTable /></section>
     </>
   );
 }
 ```
 
-Wrap sections in the project's layout/container component when one exists.
+Wrap sections in the repo's layout or container component when one exists.
 
-2. **Sections are server components**: kebab-case files, named arrow-const exports, colocated with the route (shared `components/` only when used by 2+ routes). Content is a typed `as const` array mapped to markup. **Keep the tree flat**: page → section → primitive; no pass-through wrappers, no prop drilled past one intermediate. A section's markup should be readable in its own file without following imports.
+## 2. Sections
 
-3. **Interactivity goes to the leaves.** A section needing animation imports `MotionDiv` from the `components/motion.tsx` client boundary; it does not become a client component itself. Icons import directly from the project's icon library (they render fine server-side).
+- Server components, colocated with the route; moved to shared `components/` only when a second route uses them.
+- A section's markup is readable in its own file: content as a typed `as const` array in that file, data fetched by the section that renders it.
+- Keep the tree page → section → primitive.
+- Interactivity goes in a leaf: a section stays a server component and renders a small `'use client'` child.
 
-4. **Metadata**: the root layout owns `metadataBase` and `title: { template: '%s - Site Name', default: '...' }`; the page exports a static `Metadata` object with bare `title`, `description`, full `openGraph` + `twitter`, and `alternates.canonical`. Repeated route families go through a `createPageMetadata(config)` factory plus a JSON-LD factory injected as a plain `<script type="application/ld+json">` with `<` escaped (snippets in [references/nextjs.md](references/nextjs.md)).
+## 3. Routing
 
-5. **Routing**: group by domain with `(folder)` route groups, each with its own `layout.tsx`. A self-contained feature owns its `components/`, `lib/`, `hooks/`, and colocated tests. Use the framework's file conventions (`not-found.tsx`, `error.tsx`, `loading.tsx`, `sitemap.ts`) instead of hand-rolling them.
+- Route groups `(folder)` organize by domain without changing URLs (`(marketing)`, `(dashboard)`), each with its own `layout.tsx`.
+- A route folder owns its feature code (see `pxkit-feature`). Only code shared across routes goes to top-level folders.
+- Use the framework's file conventions (`loading.tsx`, `error.tsx`, `not-found.tsx`, `sitemap.ts`, `robots.ts`, route handlers) instead of hand-rolling them.
+- Navigation and `sitemap.ts` both read one typed routes config; a path is written once.
 
-6. **Register the route** in the repo's typed routes/navigation config; nav and `sitemap.ts` both derive from that single source.
+## 4. Metadata
 
-## Verify
+- The root layout sets `metadataBase: new URL(siteConfig.url)` (relative Open Graph and canonical URLs break without it) and `title: { template: '%s - Site Name', default: 'Site Name — tagline' }`. Pages set a bare `title`; the home page omits it and gets `default`.
+- Every page has `description`, `openGraph`, `twitter`, and `alternates.canonical`.
+- Once three pages repeat the same metadata shape, build it with one plain function:
 
-- `rg "'use client'" <route folder>` matches only leaf files, never `page.tsx`, `layout.tsx`, or a section.
+```ts
+// lib/page-metadata.ts
+interface PageMetadataInput {
+  title: string;
+  description: string;
+  path: string;
+}
+
+export const buildPageMetadata = ({ title, description, path }: PageMetadataInput): Metadata => ({
+  title,
+  description,
+  alternates: { canonical: path },
+  openGraph: { title, description, url: path, images: ['/og.jpg'] },
+  twitter: { card: 'summary_large_image', title, description },
+});
+```
+
+- JSON-LD is a plain `<script>` with `<` escaped:
+
+```tsx
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+/>
+```
+
+## 5. Verify
+
+- `rg "'use client'" <route folder>` matches only leaf components, never `page.tsx`, `layout.tsx`, or a section.
 - `rg "export default" <route folder>` matches only Next.js file conventions.
-- Every section that loads data has its empty, loading, and error state.
-- Metadata resolves through the root template (check the rendered `<title>`), and the canonical URL is absolute.
-- The route appears in nav and `sitemap.ts` without a second hardcoded path.
+- Every section that loads data has a loading, empty, and error state.
+- The rendered `<title>` goes through the root template, and the canonical URL is absolute.
+- The route appears in navigation and `sitemap.ts` without a second hardcoded path.
 - The repo's `typecheck` and `lint` scripts pass.

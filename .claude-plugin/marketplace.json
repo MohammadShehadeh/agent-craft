@@ -4,13 +4,13 @@
     "name": "Mohammad Shehadeh"
   },
   "metadata": {
-    "description": "House TypeScript/React/Next.js conventions as self-contained pxkit-* skills, commands, and a conventions-reviewer agent."
+    "description": "House TypeScript/React/Next.js conventions for readable, traceable code: pxkit-* skills, commands, and a conventions-reviewer agent."
   },
   "plugins": [
     {
       "name": "pxkit",
       "source": "./",
-      "description": "House coding conventions: self-contained pxkit-* skills, commands, and a conventions-reviewer agent"
+      "description": "House conventions for readable, traceable code: pxkit-* skills, commands, and a conventions-reviewer agent"
     }
   ]
 }

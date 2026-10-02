@@ -1,7 +1,7 @@
 {
   "name": "pxkit",
-  "description": "House coding conventions as self-contained pxkit-* skills, commands, and a reviewer agent for TypeScript/React/Next.js — adapt to each repo's layout and toolchain",
-  "version": "0.7.0",
+  "description": "House conventions for TypeScript/React/Next.js focused on readable, traceable code: a two-file traceability budget and NASA's Power of Ten adapted to TypeScript, as skills, commands, and a reviewer agent",
+  "version": "0.8.0",
   "license": "MIT",
   "author": {
     "name": "Mohammad Shehadeh"

@@ -1,69 +1,58 @@
-# Components
+# Components & UI
 
-- **Named arrow-function `const` components with named exports. No default exports** — the only exception is Next.js file conventions (`page.tsx`, `layout.tsx`, `sitemap.ts`), which use `export default function`.
-- Props destructured inline in the signature, typed with a **declared** `<Component>Props` interface — never an inline object type, not even for a local helper. Local components declare theirs in the same file (see [typescript.md](typescript.md)):
+## Shape of a component file
 
-```tsx
-interface SubmitButtonProps { label: string; onSubmit: () => void }
-export const SubmitButton = ({ label, onSubmit }: SubmitButtonProps) => { ... };
-
-interface StatItemProps { value: string; label: string }
-const StatItem = ({ value, label }: StatItemProps) => ( ... );
-```
-
-- **Props model only what the component reads.** Don't accept a whole entity to use two fields — declare those two, or derive with `Pick<User, 'id' | 'name'>`. A fat props interface couples the component to data it never touches.
-- `children` is `React.ReactNode` in the props interface, or `PropsWithChildren` for simple wrappers.
-- `'use client'` / `'use server'` is always the first line of the file when needed.
-- **Compound components as flat named exports from one file** (shadcn style — `Card`/`CardHeader`, never `Card.Header`). No namespaced statics: attaching parts as properties drags every part into every import and defeats tree-shaking:
-
-```tsx
-export const PageLayout = ({ children }: PageLayoutProps) => ( ... );
-export const PageLayoutSidebar = ({ children }: PageLayoutSidebarProps) => ( ... );
-export const PageLayoutContent = ({ children }: PageLayoutContentProps) => ( ... );
-
-// usage
-<PageLayout>
-  <PageLayoutSidebar>...</PageLayoutSidebar>
-  <PageLayoutContent>...</PageLayoutContent>
-</PageLayout>
-```
-
-- **One concept, one file.** A component file contains the component and everything only it uses: local sub-components, its `<Component>Props` interface, its `as const` content array, its variant map, its 2-line formatter. Splitting those into `types/`, `constants/`, `lib/` and a second component file turns one readable file into a five-file scavenger hunt. Extract a piece only when a second file imports it:
+- Named arrow-function `const` with a named export. Default exports only where Next.js requires them (`page.tsx`, `layout.tsx`, `sitemap.ts`).
+- `'use client'` or `'use server'` is the first line when needed.
+- Props are a declared `interface <Component>Props`, destructured in the signature, local helper components included. Declare only the fields the component reads: two fields, not the whole entity (`Pick<User, 'id' | 'name'>`). `children: React.ReactNode`.
+- The file holds the component and everything only it uses, in reading order: props interface, exported component, then the private sub-components, constants, and variant maps below it. A piece moves to its own file when a second file imports it.
 
 ```tsx
 // pricing-table.tsx — the whole picture in one file
-interface PricingTableProps { plans: Plan[]; onSelect: (planId: string) => void }
-interface PlanRowProps { plan: Plan; onSelect: PricingTableProps['onSelect'] }
-
-const PLAN_BADGE = { free: 'secondary', pro: 'default', team: 'outline' } as const;
-
-const PlanRow = ({ plan, onSelect }: PlanRowProps) => ( … );
+interface PricingTableProps {
+  plans: Plan[];
+  onSelect: (planId: string) => void;
+}
 
 export const PricingTable = ({ plans, onSelect }: PricingTableProps) => (
-  <ul>{plans.map((plan) => <PlanRow key={plan.id} plan={plan} onSelect={onSelect} />)}</ul>
+  <ul className="flex flex-col gap-2">
+    {plans.map((plan) => (
+      <PlanRow key={plan.id} plan={plan} onSelect={onSelect} />
+    ))}
+  </ul>
+);
+
+interface PlanRowProps {
+  plan: Plan;
+  onSelect: (planId: string) => void;
+}
+
+const TIER_BADGE = { free: 'secondary', pro: 'default', team: 'outline' } as const;
+
+const PlanRow = ({ plan, onSelect }: PlanRowProps) => (
+  <li className="flex items-center gap-2">
+    <Badge variant={TIER_BADGE[plan.tier]}>{plan.tier}</Badge>
+    <Button onClick={() => onSelect(plan.id)}>{plan.name}</Button>
+  </li>
 );
 ```
 
-  `PlanRow`, `PLAN_BADGE`, and the props interface become their own files the day a second component needs them — not before.
-- **Compound parts — when to use:** the consumer arranges multiple slots with layout meaning (Card, PageLayout, Field). **When not:** a component with a couple of props — don't explode `<Stat value label />` into `Stat`/`StatValue`/`StatLabel` nobody rearranges.
-- **Data-driven rendering**: content lives in typed `const items = [...] as const` arrays (or `src/data/*` modules) and components `.map()` over them — content separated from markup. New entry = new array item, not new JSX.
-- `memo` only for measured hot render paths, always with an explicit `displayName`.
-- Don't sprinkle `useMemo`/`useCallback` by reflex. In React Compiler projects, skip them entirely; otherwise reserve them for genuinely expensive derivations.
+- Static content is a typed `as const` array in the same file, mapped to markup. A new entry is a new array item, not new JSX.
+- Compound components are flat named exports from one file (`Card`, `CardHeader`), never statics (`Card.Header`). Use them only when consumers arrange several slots; a component with two props stays one component.
+- Variants are a typed union prop backed by a lookup map or CVA, never a pile of booleans (`isPrimary`, `isLarge`).
+- `memo`, `useMemo`, `useCallback` only on measured hot paths, and not at all under React Compiler.
 
-## Flat component trees
+## Flat trees
 
-**Design for the flattest tree possible.** Tracing where a prop comes from must never take 3–6 file jumps.
-
-- Target depth on a page: **page → section → primitive**. Anything deeper needs a reason.
-- **No pass-through wrappers.** A component that only forwards props to a single child gets deleted.
-- **No prop drilling past one intermediate.** If data has to cross more than one layer, restructure instead of threading it through:
+- Page → section → primitive. Anything deeper needs a reason.
+- No pass-through components: a component that only forwards props to one child is deleted.
+- No prop drilled past one intermediate. Instead, in order of preference: compose with `children` or slot props, read the data where it's used (a Server Component fetches its own data), lift state only to the lowest common owner.
 
 ```tsx
-// Bad — `user` drills through 3 components that don't use it
+// Bad — `user` travels Dashboard → Sidebar → Menu → Avatar
 <Dashboard user={user} />
-// Dashboard → Sidebar → Menu → finally <Avatar user={user} />
 
-// Good — compose at the top; each piece receives its data directly
+// Good — compose at the top; each piece gets its data directly
 <Dashboard
   sidebar={
     <Sidebar>
@@ -73,4 +62,81 @@ export const PricingTable = ({ plans, onSelect }: PricingTableProps) => (
 />
 ```
 
-- Alternatives to drilling, in order of preference: **compose via `children`/slot props** (above); **read data where it's used** (a Server Component fetches its own data; a leaf reads context); **lift state only to the lowest common owner**, never to a global "just in case".
+## Server or client
+
+- Server Component by default. `'use client'` is justified only by event handlers, browser APIs, stateful hooks, or client-only libraries, and goes on the smallest leaf that needs it. Never on a page or a section.
+- Animation comes from `components/motion.tsx`, a `'use client'` re-export of the motion library, so sections stay server components.
+- Icons render on the server; they need no boundary.
+
+## shadcn/ui composition
+
+The base UI layer is shadcn/ui when the project uses it, added with the CLI (`npx shadcn@latest add <component>`), never hand-written or swapped for another library. Features compose these primitives and never redefine them. For version-specific APIs, check the current shadcn docs.
+
+- Use the full anatomy: `Card` → `CardHeader` (`CardTitle`, `CardDescription`) → `CardContent` → `CardFooter`.
+- Items live inside their group: `SelectItem` in `SelectGroup`, `DropdownMenuItem` in `DropdownMenuGroup`, `TabsTrigger` in `TabsList`, `CommandItem` in `CommandGroup`.
+- An existing primitive beats custom markup:
+
+| Instead of | Use |
+| --- | --- |
+| `<hr>` or `<div className="border-t">` | `<Separator />` |
+| `animate-pulse` divs | `<Skeleton className="h-4 w-3/4" />` |
+| a styled status `<span>` | `<Badge variant="secondary">` |
+| a styled callout `div` | `<Alert>` + `AlertTitle` + `AlertDescription` |
+
+- Overlays:
+
+| Use case | Component |
+| --- | --- |
+| Focused task that needs input | `Dialog` |
+| Confirm a destructive action | `AlertDialog` |
+| Side panel with details or filters | `Sheet` |
+| Mobile bottom panel | `Drawer` |
+| Quick info on hover | `HoverCard` |
+| Small content on click | `Popover` |
+
+- `Dialog`, `Sheet`, and `Drawer` always have a title (`className="sr-only"` if hidden). `Avatar` always has `AvatarFallback`.
+- `Button` has no `isLoading` prop; compose it: `<Button disabled><Spinner /> Saving…</Button>`.
+
+## Styling
+
+- Tailwind v4 (or the repo's utility system), CSS-first config. No inline `style`.
+- Every conditional or merged class string goes through `cn()`:
+
+```tsx
+className={cn('cursor-grab p-1', isDragging ? 'cursor-grabbing bg-primary/10' : 'hover:bg-muted')}
+```
+
+- Semantic tokens (`bg-muted`, `text-primary`, `text-muted-foreground`), never arbitrary hex or raw palette colors. No manual `dark:` color overrides; tokens cover both themes.
+- Customizing a component, stop at the first step that works: built-in variant → `className` for layout only (`mx-auto max-w-md`, never recoloring) → a theme token → a new variant in the component source → a wrapper component.
+- `gap-*` over `space-*`; `size-*` over equal `w-*` + `h-*`; `truncate`; no manual `z-index` on overlays.
+- A class string repeated inside a file becomes a local `const` in that file.
+- Mobile-first breakpoints (`md:`, `lg:`); logical utilities (`ms-2`, `pe-4`).
+
+## Icons
+
+- Import directly from the project's icon library (check which one; never assume).
+- Pass icons as component objects, never as string keys into a lookup map:
+
+```tsx
+interface StatusBadgeProps {
+  icon: React.ComponentType;
+}
+
+const StatusBadge = ({ icon: Icon }: StatusBadgeProps) => <Icon />;
+
+<StatusBadge icon={CheckIcon} />;
+```
+
+- No sizing or spacing classes on an icon inside a component that sizes its own (`Button`, `DropdownMenuItem`, `Alert`): `<Button><SearchIcon /> Search</Button>`. A standalone icon is sized by you: `<CheckIcon className="size-5 text-primary" />`.
+
+## Accessibility
+
+`focus-visible:` styles, `sr-only` text, `aria-hidden` on decoration, an `aria-label` on icon-only triggers, `role="alert"` on error output, `reducedMotion="user"` on animation config.
+
+## UX
+
+- Reuse existing patterns, tokens, and layouts before inventing a new spacing value, color, or layout shape.
+- Size, weight, and color track importance; the primary action is the clearest thing on screen.
+- Spacing comes from the scale. Elements align to a shared edge.
+- Responsive behavior is stated per breakpoint, not left to reflow; check narrow screens for clipping and hidden actions.
+- Every interactive surface has its states designed: hover, focus, active, disabled, loading, empty, error, success.

@@ -5,10 +5,24 @@
 - Named arrow-function `const` with a named export. Default exports only where Next.js requires them (`page.tsx`, `layout.tsx`, `sitemap.ts`).
 - `'use client'` or `'use server'` is the first line when needed.
 - Props are a declared `interface <Component>Props`, destructured in the signature, local helper components included. Declare only the fields the component reads: two fields, not the whole entity (`Pick<User, 'id' | 'name'>`). `children: React.ReactNode`.
-- The file holds the component and everything only it uses, in reading order: props interface, exported component, then the private sub-components, constants, and variant maps below it. A piece moves to its own file when a second file imports it.
+- The file holds the component and everything only it uses, in dependency order (red lines in `SKILL.md`): private constants, variant maps, and sub-components above the exported component's props interface and the component. A piece moves to its own file when a second file imports it.
 
 ```tsx
 // pricing-table.tsx — the whole picture in one file
+const TIER_BADGE = { free: 'secondary', pro: 'default', team: 'outline' } as const;
+
+interface PlanRowProps {
+  plan: Plan;
+  onSelect: (planId: string) => void;
+}
+
+const PlanRow = ({ plan, onSelect }: PlanRowProps) => (
+  <li className="flex items-center gap-2">
+    <Badge variant={TIER_BADGE[plan.tier]}>{plan.tier}</Badge>
+    <Button onClick={() => onSelect(plan.id)}>{plan.name}</Button>
+  </li>
+);
+
 interface PricingTableProps {
   plans: Plan[];
   onSelect: (planId: string) => void;
@@ -20,20 +34,6 @@ export const PricingTable = ({ plans, onSelect }: PricingTableProps) => (
       <PlanRow key={plan.id} plan={plan} onSelect={onSelect} />
     ))}
   </ul>
-);
-
-interface PlanRowProps {
-  plan: Plan;
-  onSelect: (planId: string) => void;
-}
-
-const TIER_BADGE = { free: 'secondary', pro: 'default', team: 'outline' } as const;
-
-const PlanRow = ({ plan, onSelect }: PlanRowProps) => (
-  <li className="flex items-center gap-2">
-    <Badge variant={TIER_BADGE[plan.tier]}>{plan.tier}</Badge>
-    <Button onClick={() => onSelect(plan.id)}>{plan.name}</Button>
-  </li>
 );
 ```
 

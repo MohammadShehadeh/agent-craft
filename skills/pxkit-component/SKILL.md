@@ -33,7 +33,7 @@ Server component unless it needs interactivity; then `'use client'` on this leaf
 
 ## 4. Build
 
-- One kebab-case file colocated with its feature, read top-down: props interface, exported component, private pieces below.
+- One kebab-case file colocated with its feature, in dependency order: private pieces first, then the props interface and exported component.
 - Composition, styling, icons, and accessibility per `components.md`.
 - Over 60 lines: split into private sub-components in the same file.
 

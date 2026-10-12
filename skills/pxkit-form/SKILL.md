@@ -100,7 +100,7 @@ export const ContactForm = () => {
 - Invalid and disabled need both attributes: `data-invalid` / `data-disabled` on `Field` (styles the label and description), `aria-invalid` / `disabled` on the control.
 - `register` or `Controller`, whichever the repo uses. Controlled shadcn components (`Select`, `Checkbox`) need `Controller`.
 - `isSubmitting` guards against double submit; no extra flag.
-- Over 60 lines: move a repeated field block into a private component below the form in the same file.
+- Over 60 lines: move a repeated field block into a private component above the form in the same file.
 
 ## 5. File layout
 

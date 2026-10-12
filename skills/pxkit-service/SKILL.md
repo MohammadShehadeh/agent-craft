@@ -57,6 +57,8 @@ import { getAuthHeaders } from '@/lib/auth'; // the repo's own auth lookup
 export type SharedErrorKey = 'NETWORK' | 'TIMEOUT' | 'UNAUTHORIZED' | 'RATE_LIMITED';
 
 interface RequestOptions<K extends string> {
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  body?: unknown; // sent as JSON
   fallbackKey: K; // any failed status the shared keys don't cover
   notFoundKey?: K; // a 404 gets this reason key instead of the catch-all
   signal?: AbortSignal; // caller cancellation, combined with the timeout
@@ -65,49 +67,49 @@ interface RequestOptions<K extends string> {
 
 const TIMEOUT_MS = 10_000;
 
-export const http = {
-  get: <K extends string>(path: string, options: RequestOptions<K>) => request(path, { method: 'GET' }, options),
-  post: <K extends string>(path: string, body: unknown, options: RequestOptions<K>) =>
-    request(path, { method: 'POST', body: JSON.stringify(body) }, options),
-  patch: <K extends string>(path: string, body: unknown, options: RequestOptions<K>) =>
-    request(path, { method: 'PATCH', body: JSON.stringify(body) }, options),
-  delete: <K extends string>(path: string, options: RequestOptions<K>) => request(path, { method: 'DELETE' }, options),
-};
-
-// data is unknown on purpose: the service parses it with its schema
-const request = async <K extends string>(
-  path: string,
-  init: RequestInit,
-  options: RequestOptions<K>,
-): Promise<Result<unknown, SharedErrorKey | K>> => {
-  const timeout = AbortSignal.timeout(TIMEOUT_MS);
-  try {
-    const response = await fetch(`${env.API_BASE_URL}${path}`, {
-      ...init,
-      keepalive: options.keepalive,
-      headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
-      signal: options.signal ? AbortSignal.any([options.signal, timeout]) : timeout,
-    });
-    if (!response.ok) return { ok: false, errorKey: errorKeyFromStatus(response.status, options) };
-    if (response.status === 204) return { ok: true, data: null };
-    return { ok: true, data: await response.json() };
-  } catch (error) {
-    console.error(`Error in http ${init.method} ${path}::`, error);
-    return { ok: false, errorKey: errorKeyFromException(error) };
-  }
-};
-
-const errorKeyFromStatus = <K extends string>(status: number, options: RequestOptions<K>): SharedErrorKey | K => {
+const errorKeyFromStatus = <K extends string>(status: number, fallbackKey: K, notFoundKey?: K): SharedErrorKey | K => {
   if (status === 401) return 'UNAUTHORIZED';
-  if (status === 404 && options.notFoundKey) return options.notFoundKey;
+  if (status === 404 && notFoundKey) return notFoundKey;
   if (status === 429) return 'RATE_LIMITED';
-  return options.fallbackKey;
+  return fallbackKey;
 };
 
 // exported for services that wrap a non-HTTP SDK.
 // "Took too long, try again" and "check your connection" are different instructions to the user.
 export const errorKeyFromException = (error: unknown): SharedErrorKey =>
   error instanceof DOMException && error.name === 'TimeoutError' ? 'TIMEOUT' : 'NETWORK';
+
+// data is unknown on purpose: the service parses it with its schema
+export const http = async <K extends string>(
+  path: string,
+  { method, body, fallbackKey, notFoundKey, signal, keepalive }: RequestOptions<K>,
+): Promise<Result<unknown, SharedErrorKey | K>> => {
+  const timeout = AbortSignal.timeout(TIMEOUT_MS);
+
+  try {
+    const headers = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
+    const response = await fetch(`${env.API_BASE_URL}${path}`, {
+      method,
+      headers,
+      keepalive,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    });
+
+    if (!response.ok) {
+      return { ok: false, errorKey: errorKeyFromStatus(response.status, fallbackKey, notFoundKey) }
+    }
+
+    if (response.status === 204) {
+      return { ok: true, data: null }
+    }
+
+    return { ok: true, data: await response.json() };
+  } catch (error) {
+    console.error(`Error in http ${method} ${path}::`, error);
+    return { ok: false, errorKey: errorKeyFromException(error) };
+  }
+};
 ```
 
 - A second backend with different auth is a second file (`lib/billing-http.ts`), copied from this one. Two copies of 60 readable lines beat a configurable factory.
@@ -133,21 +135,6 @@ export interface Invoice {
   status: InvoiceStatus;
 }
 
-export const fetchInvoice = async (id: string): Promise<Result<Invoice, InvoiceErrorKey>> => {
-  const res = await http.get(`/invoices/${id}`, {
-    fallbackKey: 'INVOICE_FETCH_FAILED',
-    notFoundKey: 'INVOICE_NOT_FOUND',
-  });
-  if (!res.ok) return res;
-
-  const dto = invoiceDtoSchema.safeParse(res.data);
-  if (!dto.success) {
-    console.error('Error in fetchInvoice::', dto.error);
-    return { ok: false, errorKey: 'INVOICE_RESPONSE_INVALID' };
-  }
-  return { ok: true, data: parseInvoice(dto.data) };
-};
-
 // the vendor's shape — it never leaves this file
 const invoiceDtoSchema = z.object({
   invoice_id: z.string(),
@@ -164,6 +151,22 @@ export const parseInvoice = (dto: InvoiceDto): Invoice => ({
   issuedAt: new Date(dto.issued_at),
   status: dto.state === 'PAID' ? 'paid' : 'open',
 });
+
+export const fetchInvoice = async (id: string): Promise<Result<Invoice, InvoiceErrorKey>> => {
+  const res = await http(`/invoices/${id}`, {
+    method: 'GET',
+    fallbackKey: 'INVOICE_FETCH_FAILED',
+    notFoundKey: 'INVOICE_NOT_FOUND',
+  });
+  if (!res.ok) return res;
+
+  const dto = invoiceDtoSchema.safeParse(res.data);
+  if (!dto.success) {
+    console.error('Error in fetchInvoice::', dto.error);
+    return { ok: false, errorKey: 'INVOICE_RESPONSE_INVALID' };
+  }
+  return { ok: true, data: parseInvoice(dto.data) };
+};
 ```
 
 - **The schema is the DTO type.** No hand-written DTO interface beside it.
@@ -218,7 +221,11 @@ export const submitContact = async (values: ContactValues): Promise<Result<null,
   const parsed = contactSchema.safeParse(values); // the client is untrusted, even our own form
   if (!parsed.success) return { ok: false, errorKey: 'CONTACT_INVALID' };
 
-  const res = await http.post('/contact', parsed.data, { fallbackKey: 'CONTACT_SUBMIT_FAILED' });
+  const res = await http('/contact', {
+    method: 'POST',
+    body: parsed.data,
+    fallbackKey: 'CONTACT_SUBMIT_FAILED',
+  });
   return res.ok ? { ok: true, data: null } : res;
 };
 ```

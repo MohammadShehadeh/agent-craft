@@ -12,7 +12,7 @@ The rules in this file apply to every line of code. Each topic rule is written i
 - **Traceability budget: two files.** A reader understands a function or component by opening at most two other files. Shared infrastructure the whole repo uses (`Result`, the `http` client, `env`, `cn`, error copy, UI primitives) doesn't count. Over budget means the structure is wrong: inline it, colocate it, or pass the data directly.
 - **Duplication over the wrong abstraction.** Two similar blocks are fine. A function that needs a flag, an options bag, or a type parameter to serve two callers is two functions. Moving existing code to a shared file when a second file imports it is fine; unifying similar code into a new abstraction waits for the third identical case.
 - **Simple over clever.** If a reviewer has to think to see that it works, rewrite it.
-- **Written for humans.** Names say the business meaning (`isEligibleForRenewal`, not `flag2`). Comments say why, never what. A file reads in dependency order: private pieces above the export that uses them, so nothing is read before it's defined. An export and the private pieces only it uses form one group; pieces shared by several groups go above all of them.
+- **Written for humans.** Names say the business meaning (`isEligibleForRenewal`, not `flag2`). Comments say why, never what. A file reads in dependency order: private pieces above the export that uses them, so nothing is read before it's defined. An export and the private pieces only it uses form one group; pieces shared by several groups go above all of them. Inside a function, blank lines separate its steps like paragraphs (validate, calculate, act, return), so its shape shows before any line is read.
 
 ## NASA's Power of Ten, for TypeScript and React
 

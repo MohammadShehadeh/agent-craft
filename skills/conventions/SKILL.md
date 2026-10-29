@@ -1,9 +1,9 @@
 ---
-name: pxkit-conventions
-description: The pxkit house style for TypeScript, React, and Next.js — readability red lines, NASA's Power of Ten rules adapted to TypeScript, naming and types, components and styling with shadcn/ui and Tailwind, hooks and state. Use this whenever you write, edit, refactor, or review any .ts/.tsx file — a component, hook, service, server action, route handler, type, or stylesheet — even for a "small" change or when the user does not mention conventions. Also use it when the user asks whether code "follows the house style" or "matches the repo".
+name: conventions
+description: The agent-craft house style for TypeScript, React, and Next.js — readability red lines, NASA's Power of Ten rules adapted to TypeScript, naming and types, components and styling with shadcn/ui and Tailwind, hooks and state. Use this whenever you write, edit, refactor, or review any .ts/.tsx file — a component, hook, service, server action, route handler, type, or stylesheet — even for a "small" change or when the user does not mention conventions. Also use it when the user asks whether code "follows the house style" or "matches the repo".
 ---
 
-# pxkit Conventions
+# agent-craft Conventions
 
 The rules in this file apply to every line of code. Each topic rule is written in exactly one place; the table at the end says where.
 
@@ -49,11 +49,11 @@ Gerard Holzmann's rules for safety-critical code at NASA/JPL, adapted from C. Wh
 | You are about to… | Read |
 | --- | --- |
 | name files or identifiers, write types | `references/typescript.md` |
-| write or restyle a component, pick a UI primitive, add a client boundary | `references/components.md` (the `pxkit-component` skill to design a new one) |
+| write or restyle a component, pick a UI primitive, add a client boundary | `references/components.md` (the `agent-craft:component` skill to design a new one) |
 | write a hook, hold state, derive a list view, add optimistic UI or context | `references/state.md` |
-| build a form | the `pxkit-form` skill |
-| call an API, DB, or SDK; add a server action or route handler; add error keys | the `pxkit-service` skill |
-| add a page, route, layout, or metadata | the `pxkit-nextjs-page` skill |
-| start a feature, create a feature folder or package | the `pxkit-feature` skill |
-| investigate a bug | the `pxkit-debug` skill |
+| build a form | the `agent-craft:form` skill |
+| call an API, DB, or SDK; add a server action or route handler; add error keys | the `agent-craft:service` skill |
+| add a page, route, layout, or metadata | the `agent-craft:nextjs-page` skill |
+| start a feature, create a feature folder or package | the `agent-craft:feature` skill |
+| investigate a bug | the `agent-craft:debug` skill |
 | review a diff | `references/review-checklist.md` |

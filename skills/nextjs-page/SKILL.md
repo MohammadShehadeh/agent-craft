@@ -1,11 +1,11 @@
 ---
-name: pxkit-nextjs-page
-description: Build a Next.js App Router page, route group, or landing section the pxkit way — a thin server page composing section components, client code only in leaves, metadata through the root title template and a buildPageMetadata function, routes registered in one typed config. Use whenever the user asks for a new page, route, landing or marketing section, hero, pricing or about page, layout, route group, SEO metadata, or sitemap entry, even when they only say "add a page for X".
+name: nextjs-page
+description: Build a Next.js App Router page, route group, or landing section the agent-craft way — a thin server page composing section components, client code only in leaves, metadata through the root title template and a buildPageMetadata function, routes registered in one typed config. Use whenever the user asks for a new page, route, landing or marketing section, hero, pricing or about page, layout, route group, SEO metadata, or sitemap entry, even when they only say "add a page for X".
 ---
 
-# pxkit Next.js Page
+# agent-craft Next.js Page
 
-Every Next.js routing and metadata rule lives here. Load `pxkit-conventions` for the rules that apply to all code; its `components.md` holds the server/client boundary rules.
+Every Next.js routing and metadata rule lives here. Load `agent-craft:conventions` for the rules that apply to all code; its `components.md` holds the server/client boundary rules.
 
 ## Gates
 
@@ -47,7 +47,7 @@ Wrap sections in the repo's layout or container component when one exists.
 ## 3. Routing
 
 - Route groups `(folder)` organize by domain without changing URLs (`(marketing)`, `(dashboard)`), each with its own `layout.tsx`.
-- A route folder owns its feature code (see `pxkit-feature`). Only code shared across routes goes to top-level folders.
+- A route folder owns its feature code (see `agent-craft:feature`). Only code shared across routes goes to top-level folders.
 - Use the framework's file conventions (`loading.tsx`, `error.tsx`, `not-found.tsx`, `sitemap.ts`, `robots.ts`, route handlers) instead of hand-rolling them.
 - Navigation and `sitemap.ts` both read one typed routes config; a path is written once.
 

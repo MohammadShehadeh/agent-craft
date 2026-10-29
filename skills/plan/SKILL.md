@@ -1,6 +1,8 @@
 ---
-description: Plan before coding — restate the task as verifiable targets with done criteria, scope boundaries, and stop conditions; confirm before writing code
+name: plan
+description: Plan before coding — restate the task as verifiable targets with done criteria, scope boundaries, and stop conditions; confirm before writing code. Run as /agent-craft:plan <task>.
 argument-hint: <task description>
+disable-model-invocation: true
 ---
 
 Plan this task before writing any code: $ARGUMENTS

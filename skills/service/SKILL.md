@@ -1,11 +1,11 @@
 ---
-name: pxkit-service
-description: Write a service or server boundary the pxkit way — one plain http client, zod-parsed responses and payloads, DTOs parsed to domain types once, a narrowed Result with SCREAMING_SNAKE error keys, and no throws to the UI. Use whenever the user asks to call an API, fetch or submit data, add a server action, route handler, webhook, database query, or integrate a vendor SDK (Stripe, Slack, GitHub, …), and whenever a task would write fetch(), axios, or process.env in feature code, even if they don't say "service".
+name: service
+description: Write a service or server boundary the agent-craft way — one plain http client, zod-parsed responses and payloads, DTOs parsed to domain types once, a narrowed Result with SCREAMING_SNAKE error keys, and no throws to the UI. Use whenever the user asks to call an API, fetch or submit data, add a server action, route handler, webhook, database query, or integrate a vendor SDK (Stripe, Slack, GitHub, …), and whenever a task would write fetch(), axios, or process.env in feature code, even if they don't say "service".
 ---
 
-# pxkit Service & Boundary
+# agent-craft Service & Boundary
 
-Every rule about talking to the outside world lives here: the `http` client, `Result`, error keys, parsing, server actions, route handlers, and env. Load `pxkit-conventions` for the rules that apply to all code.
+Every rule about talking to the outside world lives here: the `http` client, `Result`, error keys, parsing, server actions, route handlers, and env. Load `agent-craft:conventions` for the rules that apply to all code.
 
 ## Gates
 
@@ -170,7 +170,7 @@ export const fetchInvoice = async (id: string): Promise<Result<Invoice, InvoiceE
 ```
 
 - **The schema is the DTO type.** No hand-written DTO interface beside it.
-- **Parse once.** The parser is the only place a wire value becomes a domain value (date strings to `Date`, cents to `number`, vendor enums to a union). Nothing downstream re-parses; an `Invalid Date` at a read site means fix the parser. Display formatting is the view's job (`pxkit-conventions` → `state.md`).
+- **Parse once.** The parser is the only place a wire value becomes a domain value (date strings to `Date`, cents to `number`, vendor enums to a union). Nothing downstream re-parses; an `Invalid Date` at a read site means fix the parser. Display formatting is the view's job (`agent-craft:conventions` → `state.md`).
 - **Name parsers for what they do**: `parseInvoice` inbound, `formatInvoiceRow` outbound. Plain functions, no mapper classes.
 - **A service wrapping a non-HTTP SDK** keeps its own `try/catch`, logs with `console.error('Error in <fn>::', error)`, and returns `errorKeyFromException(error)`.
 

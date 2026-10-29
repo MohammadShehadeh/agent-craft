@@ -1,9 +1,14 @@
 {
-  "name": "pxkit",
-  "description": "House conventions for TypeScript/React/Next.js focused on readable, traceable code: a two-file traceability budget and NASA's Power of Ten adapted to TypeScript, as skills, commands, and a reviewer agent",
-  "version": "0.8.0",
-  "license": "MIT",
+  "name": "agent-craft",
+  "displayName": "Agent Craft",
+  "version": "1.0.0",
+  "description": "House conventions for TypeScript/React/Next.js focused on readable, traceable code: a two-file traceability budget and NASA's Power of Ten adapted to TypeScript, as skills and a reviewer agent",
   "author": {
-    "name": "Mohammad Shehadeh"
-  }
+    "name": "Mohammad Shehadeh",
+    "url": "https://github.com/MohammadShehadeh"
+  },
+  "homepage": "https://github.com/MohammadShehadeh/agent-craft",
+  "repository": "https://github.com/MohammadShehadeh/agent-craft",
+  "license": "MIT",
+  "keywords": ["typescript", "react", "nextjs", "conventions", "code-review", "skills"]
 }

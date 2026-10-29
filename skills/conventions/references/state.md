@@ -27,7 +27,7 @@ type ReportState =
 ```
 
 - A hook exposes `status` plus only the derived flags its callers read. A single in-flight flag (`isPending` from a transition) needs no `status`.
-- Failures carry an `errorKey`, never a message string (`pxkit-service` skill).
+- Failures carry an `errorKey`, never a message string (`agent-craft:service` skill).
 
 ## Server state: the query cache
 

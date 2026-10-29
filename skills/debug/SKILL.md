@@ -1,9 +1,9 @@
 ---
-name: pxkit-debug
-description: The pxkit debugging method for TypeScript, React, and Next.js — reproduce, localize top-down (page → section → primitive), map references both ways, trace to the root cause (asking where, why, and how for wrong-value bugs), and account for the blast radius before fixing. Use whenever the user reports a bug, regression, crash, flaky behavior, "wrong value", "it used to work", or asks why something renders or computes incorrectly, even when they only ask for a quick fix.
+name: debug
+description: The agent-craft debugging method for TypeScript, React, and Next.js — reproduce, localize top-down (page → section → primitive), map references both ways, trace to the root cause (asking where, why, and how for wrong-value bugs), and account for the blast radius before fixing. Use whenever the user reports a bug, regression, crash, flaky behavior, "wrong value", "it used to work", or asks why something renders or computes incorrectly, even when they only ask for a quick fix.
 ---
 
-# pxkit Debug
+# agent-craft Debug
 
 A bug is found by narrowing its location, fixed by tracing its cause, and shipped after checking who else it touches. Work the five steps in order and report in the format at the end.
 

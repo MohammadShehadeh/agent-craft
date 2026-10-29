@@ -1,16 +1,20 @@
 {
-  "name": "pxkit",
+  "name": "agent-craft",
   "owner": {
-    "name": "Mohammad Shehadeh"
+    "name": "Mohammad Shehadeh",
+    "url": "https://github.com/MohammadShehadeh"
   },
   "metadata": {
-    "description": "House TypeScript/React/Next.js conventions for readable, traceable code: pxkit-* skills, commands, and a conventions-reviewer agent."
+    "description": "House TypeScript/React/Next.js conventions for readable, traceable code: skills, a plan and review command, and a conventions-reviewer agent."
   },
   "plugins": [
     {
-      "name": "pxkit",
+      "name": "agent-craft",
       "source": "./",
-      "description": "House conventions for readable, traceable code: pxkit-* skills, commands, and a conventions-reviewer agent"
+      "description": "House conventions for readable, traceable code: skills, a plan and review command, and a conventions-reviewer agent",
+      "version": "1.0.0",
+      "category": "development",
+      "keywords": ["typescript", "react", "nextjs", "conventions", "code-review"]
     }
   ]
 }

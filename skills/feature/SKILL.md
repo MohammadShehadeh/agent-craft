@@ -1,11 +1,11 @@
 ---
-name: pxkit-feature
-description: Plan and build a feature the pxkit way — user journey and business rules first, a flat component tree, an explicit state and communication map, then a colocated feature folder with direct imports, and a shared package only when 2+ consumers exist. Use whenever the user asks to add a feature, module, domain area, or "section of the app", or to add hooks, actions, or services to an existing one, and whenever a task would create a new folder under app/, features/, or packages/, even if they don't say "feature".
+name: feature
+description: Plan and build a feature the agent-craft way — user journey and business rules first, a flat component tree, an explicit state and communication map, then a colocated feature folder with direct imports, and a shared package only when 2+ consumers exist. Use whenever the user asks to add a feature, module, domain area, or "section of the app", or to add hooks, actions, or services to an existing one, and whenever a task would create a new folder under app/, features/, or packages/, even if they don't say "feature".
 ---
 
-# pxkit Feature
+# agent-craft Feature
 
-How a feature is planned, where it lives, and how its folder is laid out. Load `pxkit-conventions` for the rules inside each file.
+How a feature is planned, where it lives, and how its folder is laid out. Load `agent-craft:conventions` for the rules inside each file.
 
 ## Gates
 

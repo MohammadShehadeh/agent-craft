@@ -1,11 +1,11 @@
 ---
-name: pxkit-form
-description: Build or extend a form the pxkit way — zod schema and error keys first, react-hook-form logic, shadcn Field/FieldGroup markup, a control chooser, and submit through a Result-returning server action. Use whenever the user asks for a form, sign-up/login/checkout/contact/settings screen, input validation, a multi-step wizard, or a submit flow, and whenever a task adds two or more inputs that get submitted together, even if they only say "add a couple of fields".
+name: form
+description: Build or extend a form the agent-craft way — zod schema and error keys first, react-hook-form logic, shadcn Field/FieldGroup markup, a control chooser, and submit through a Result-returning server action. Use whenever the user asks for a form, sign-up/login/checkout/contact/settings screen, input validation, a multi-step wizard, or a submit flow, and whenever a task adds two or more inputs that get submitted together, even if they only say "add a couple of fields".
 ---
 
-# pxkit Form
+# agent-craft Form
 
-Every form rule lives here. Load `pxkit-conventions` for the rules that apply to all code, and `pxkit-service` when the submit action doesn't exist yet.
+Every form rule lives here. Load `agent-craft:conventions` for the rules that apply to all code, and `agent-craft:service` when the submit action doesn't exist yet.
 
 ## Gates
 
@@ -28,7 +28,7 @@ Reuse the repo's existing form pattern, schema location, and Field components.
 
 - Export a zod schema from the feature's `lib/` (`lib/contact-schema.ts`); the form and the action both import it. Derive the type: `type ContactValues = z.infer<typeof contactSchema>`.
 - Field validation messages live in the schema (an i18n key, or the copy itself in a single-language app).
-- Submit failures are error keys declared in the action (`pxkit-service`, step 6), named by reason when known.
+- Submit failures are error keys declared in the action (`agent-craft:service`, step 6), named by reason when known.
 
 Present the schema, the fields with their defaults, and the submit error keys. Wait for confirmation.
 

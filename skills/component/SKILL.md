@@ -1,11 +1,11 @@
 ---
-name: pxkit-component
-description: Design and build a React component the pxkit way — place it in the tree, list its states, design the props API before the markup, compose existing primitives, and keep everything it uses in one file. Use whenever the user asks for a new component, card, list, row, panel, widget, or UI piece, or asks to split or restructure a component, even if they only say "add a button that…".
+name: component
+description: Design and build a React component the agent-craft way — place it in the tree, list its states, design the props API before the markup, compose existing primitives, and keep everything it uses in one file. Use whenever the user asks for a new component, card, list, row, panel, widget, or UI piece, or asks to split or restructure a component, even if they only say "add a button that…".
 ---
 
-# pxkit Component
+# agent-craft Component
 
-The steps for designing a new component. The rules it must follow live in `pxkit-conventions` → `references/components.md`; read that first.
+The steps for designing a new component. The rules it must follow live in `agent-craft:conventions` → `references/components.md`; read that first.
 
 ## Gates
 

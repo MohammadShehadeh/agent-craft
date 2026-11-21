@@ -9,7 +9,8 @@
 
 ## Identifiers
 
-- camelCase for values and functions; PascalCase for components, types, and interfaces. No `I` prefix.
+- camelCase for values and functions; PascalCase for components, contexts, types, and interfaces. No `I` prefix.
+- SCREAMING_SNAKE_CASE for module-scope constants written as literals: numbers, strings, and `as const` maps and arrays (`TIMEOUT_MS`, `TIER_BADGE`). Values built by a call stay camelCase (`invoiceDtoSchema`, `money`).
 - Booleans read as questions: `isLoading`, `hasNewStep`, `shouldBlock`.
 - Internal event handlers are `handle*` (`handleFileSelect`); callback props are `on*` (`onUploadComplete`).
 - Name the business meaning, not the technical accident: `calculateDiscount`, `isEligibleForRenewal`, not `doAction`, `checkFlag2`, `processData`, `manager`.
@@ -21,12 +22,12 @@
 - String-literal unions, or an `as const` object with `keyof typeof` when the values carry data. Never `enum`.
 
 ```ts
-const uploadLimits = {
+const UPLOAD_LIMITS = {
   image: { maxSizeMb: 5, accept: ['image/png', 'image/jpeg'] },
   document: { maxSizeMb: 20, accept: ['application/pdf'] },
 } as const;
 
-type UploadKind = keyof typeof uploadLimits;
+type UploadKind = keyof typeof UPLOAD_LIMITS;
 ```
 
 - **Derive, don't restate.** A shape that exists somewhere is derived from it: `z.infer<typeof schema>`, `keyof typeof`, `ReturnType`, `Pick`, `Omit`. A second hand-written copy drifts.

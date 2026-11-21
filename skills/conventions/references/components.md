@@ -5,14 +5,16 @@
 - Named arrow-function `const` with a named export. Default exports only where Next.js requires them (`page.tsx`, `layout.tsx`, `sitemap.ts`).
 - `'use client'` or `'use server'` is the first line when needed.
 - Props are a declared `interface <Component>Props`, destructured in the signature, local helper components included. Declare only the fields the component reads: two fields, not the whole entity (`Pick<User, 'id' | 'name'>`). `children: React.ReactNode`.
-- The file holds the component and everything only it uses, in dependency order (red lines in `SKILL.md`): private constants, variant maps, and sub-components above the exported component's props interface and the component. A piece moves to its own file when a second file imports it.
+- The file holds the component and everything only it uses, in dependency order (red lines in `SKILL.md`): private constants, variant maps, and sub-components above the exported component's props interface and the component. A piece moves to its own file when a second file imports it, or when the component outgrows its file and becomes a directory (`agent-craft:feature` skill).
 
 ```tsx
 // pricing-table.tsx — the whole picture in one file
 const TIER_BADGE = { free: 'secondary', pro: 'default', team: 'outline' } as const;
 
+type PlanSummary = Pick<Plan, 'id' | 'name' | 'tier'>;
+
 interface PlanRowProps {
-  plan: Plan;
+  plan: PlanSummary;
   onSelect: (planId: string) => void;
 }
 
@@ -24,7 +26,7 @@ const PlanRow = ({ plan, onSelect }: PlanRowProps) => (
 );
 
 interface PricingTableProps {
-  plans: Plan[];
+  plans: PlanSummary[];
   onSelect: (planId: string) => void;
 }
 
@@ -38,9 +40,76 @@ export const PricingTable = ({ plans, onSelect }: PricingTableProps) => (
 ```
 
 - Static content is a typed `as const` array in the same file, mapped to markup. A new entry is a new array item, not new JSX.
-- Compound components are flat named exports from one file (`Card`, `CardHeader`), never statics (`Card.Header`). Use them only when consumers arrange several slots; a component with two props stays one component.
 - Variants are a typed union prop backed by a lookup map or CVA, never a pile of booleans (`isPrimary`, `isLarge`).
 - `memo`, `useMemo`, `useCallback` only on measured hot paths, and not at all under React Compiler.
+
+## Compound components
+
+A compound component is a root plus parts that consumers arrange (`Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`).
+
+- **Only when consumers arrange several slots.** A component with two props stays one component; a fixed layout stays one component with slot props.
+- **One file, flat named exports.** Every part's name starts with the root's (`Stepper`, `StepperStep`), and every part is exported from the root's file, never as statics (`Stepper.Step`). If the file outgrows itself, it becomes a concept directory whose entry still exports every part.
+- **The root owns the shared state.** Parts read it through a context and a guard hook declared privately in the same file, above every part that uses them. A part used outside its root throws a developer-facing message.
+- **Parts without shared state are plain styled slots** (`Card`, `CardHeader`) with no context and no `'use client'`.
+- Parts take only their own props; nothing passes from root to part by prop.
+
+```tsx
+'use client';
+
+// stepper.tsx — root, parts, and their context in one file
+interface StepperContextValue {
+  activeStep: number;
+  onStepChange: (step: number) => void;
+}
+
+const StepperContext = createContext<StepperContextValue | null>(null);
+
+const useStepper = () => {
+  const value = useContext(StepperContext);
+  if (!value) throw new Error('Stepper parts must be used inside <Stepper>');
+  return value;
+};
+
+interface StepperProps {
+  children: React.ReactNode;
+}
+
+export const Stepper = ({ children }: StepperProps) => {
+  const [activeStep, setActiveStep] = useState(0);
+
+  return (
+    <StepperContext.Provider value={{ activeStep, onStepChange: setActiveStep }}>
+      <ol className="flex flex-col gap-2">{children}</ol>
+    </StepperContext.Provider>
+  );
+};
+
+interface StepperStepProps {
+  step: number;
+  children: React.ReactNode;
+}
+
+export const StepperStep = ({ step, children }: StepperStepProps) => {
+  const { activeStep, onStepChange } = useStepper();
+
+  return (
+    <li>
+      <Button
+        variant={step === activeStep ? 'default' : 'ghost'}
+        onClick={() => onStepChange(step)}
+      >
+        {children}
+      </Button>
+    </li>
+  );
+};
+
+// consumer
+<Stepper>
+  <StepperStep step={0}>Account</StepperStep>
+  <StepperStep step={1}>Billing</StepperStep>
+</Stepper>;
+```
 
 ## Flat trees
 

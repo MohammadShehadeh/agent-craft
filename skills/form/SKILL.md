@@ -54,13 +54,14 @@ Present the schema, the fields with their defaults, and the submit error keys. W
 One file, `'use client'`, markup and logic together:
 
 ```tsx
-// components/contact-form.tsx
 'use client';
 
+// components/contact-form.tsx
 export const ContactForm = () => {
   const form = useForm<ContactValues>({
     defaultValues: { email: '', message: '' },
-    mode: 'onTouched', // validate after first blur, then live; onChange only for per-keystroke feedback
+    // validate after first blur, then live; onChange only for per-keystroke feedback
+    mode: 'onTouched',
     resolver: zodResolver(contactSchema),
   });
   const { errors, isSubmitting } = form.formState;
@@ -71,6 +72,7 @@ export const ContactForm = () => {
       form.setError('root', { message: errorCopy[result.errorKey] });
       return;
     }
+
     form.reset();
   };
 
@@ -79,7 +81,12 @@ export const ContactForm = () => {
       <FieldGroup>
         <Field data-invalid={!!errors.email}>
           <FieldLabel htmlFor="email">Email</FieldLabel>
-          <Input id="email" type="email" aria-invalid={!!errors.email} {...form.register('email')} />
+          <Input
+            id="email"
+            type="email"
+            aria-invalid={!!errors.email}
+            {...form.register('email')}
+          />
           {errors.email ? <FieldError>{errors.email.message}</FieldError> : null}
         </Field>
         <Field data-invalid={!!errors.message}>

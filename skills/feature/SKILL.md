@@ -53,18 +53,26 @@ For every piece of state, write down:
 ## 5. Folder layout
 
 ```
-<feature>/
-  components/   # JSX
-  hooks/        # use-*.ts, only when two components share one
-  actions/      # 'use server' mutations
-  services/     # reads and shared I/O
-  lib/          # schemas and decisions shared by 2+ files, or that need their own tests
+features/billing/
+  components/                 # JSX
+    invoice-list.tsx          # a concept that fits in one file
+    checkout/                 # a concept that outgrew one file
+      checkout.tsx            # entry: the only file imported from outside checkout/
+      checkout-summary.tsx
+      checkout-payment.tsx
+  hooks/                      # use-*.ts, only when two components share one
+  actions/                    # 'use server' mutations
+  services/                   # reads and shared I/O
+  lib/                        # schemas and decisions shared by 2+ files, or that need their own tests
 ```
 
-- One level deep. A directory exists only when a file lives in it.
+- **Focused directories.** A feature directory holds one domain area. Under it, a role directory (`components/`, `hooks/`, …) holds one kind of file, and a concept directory holds one concept. Three levels at most: feature → role → concept. A directory exists only when a file lives in it.
+- **Focused files.** A file holds one public concept and everything private to it (`references/typescript.md`).
+- **When a file becomes a directory.** When a concept's file passes 300 lines, or its private pieces have grown into units with their own props and state, the concept moves to a directory named after it. The entry file repeats the directory name (`checkout/checkout.tsx`), so the import path says what it is. Each piece goes to a sibling file named `<concept>-<piece>.tsx`. A piece that needs its own directory is a second concept: promote it to a sibling of the first.
+- **Boundaries.** Code outside a concept directory imports only its entry file. The entry file defines and exports everything consumers use, compound parts included; sibling files hold only pieces private to the concept, so no re-export is ever needed. Files inside the directory import each other freely; nothing reaches into another concept's internals. A feature never imports another feature's internals; code two features need moves to a shared top-level folder.
+- **Traceability holds.** The entry file plus at most two sibling files explain the concept. If it takes more, the directory holds two concepts.
 - Types, constants, and error keys live in the file that uses or produces them. A `types/` or `constants/` directory appears only for things two files share.
-- Consumers import the defining file through the repo's alias (`@/features/upload/components/dropzone`). There is no `index.ts` and no "public" layer.
-- Code another feature needs moves to a shared top-level folder; a feature never imports another feature's internals.
+- Consumers import the defining file through the repo's alias (`@/features/billing/components/checkout/checkout`). There is no `index.ts` and no "public" layer.
 - Two known cases are a `switch` or a lookup map. A plugin-style registry only when outside code must register new cases.
 
 ## 6. Package — only when extracted
@@ -92,5 +100,6 @@ A wildcard resolves one extension per directory: JSX only in `components/`, ever
 - `rg --files <feature> | rg "index\.ts$"` returns nothing.
 - `rg "export default" <feature>` matches only Next.js file conventions.
 - Pick any file in the feature: it can be understood by opening at most two other files.
+- No import from outside a concept directory names a file other than its entry, and no directory sits deeper than feature → role → concept.
 - The repo's `typecheck`, `lint`, and `test` scripts pass, including tests for the business rules from step 1.
 - Every changed line traces to the plan.

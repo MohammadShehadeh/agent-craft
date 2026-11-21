@@ -67,7 +67,11 @@ interface RequestOptions<K extends string> {
 
 const TIMEOUT_MS = 10_000;
 
-const errorKeyFromStatus = <K extends string>(status: number, fallbackKey: K, notFoundKey?: K): SharedErrorKey | K => {
+const errorKeyFromStatus = <K extends string>(
+  status: number,
+  fallbackKey: K,
+  notFoundKey?: K,
+): SharedErrorKey | K => {
   if (status === 401) return 'UNAUTHORIZED';
   if (status === 404 && notFoundKey) return notFoundKey;
   if (status === 429) return 'RATE_LIMITED';
@@ -97,12 +101,10 @@ export const http = async <K extends string>(
     });
 
     if (!response.ok) {
-      return { ok: false, errorKey: errorKeyFromStatus(response.status, fallbackKey, notFoundKey) }
+      return { ok: false, errorKey: errorKeyFromStatus(response.status, fallbackKey, notFoundKey) };
     }
 
-    if (response.status === 204) {
-      return { ok: true, data: null }
-    }
+    if (response.status === 204) return { ok: true, data: null };
 
     return { ok: true, data: await response.json() };
   } catch (error) {
@@ -124,7 +126,11 @@ import { z } from 'zod';
 import { http, type SharedErrorKey } from '@/lib/http';
 import type { Result } from '@/types/result';
 
-export type InvoiceErrorKey = SharedErrorKey | 'INVOICE_NOT_FOUND' | 'INVOICE_FETCH_FAILED' | 'INVOICE_RESPONSE_INVALID';
+export type InvoiceErrorKey =
+  | SharedErrorKey
+  | 'INVOICE_NOT_FOUND'
+  | 'INVOICE_FETCH_FAILED'
+  | 'INVOICE_RESPONSE_INVALID';
 
 export type InvoiceStatus = 'paid' | 'open';
 
@@ -165,6 +171,7 @@ export const fetchInvoice = async (id: string): Promise<Result<Invoice, InvoiceE
     console.error('Error in fetchInvoice::', dto.error);
     return { ok: false, errorKey: 'INVOICE_RESPONSE_INVALID' };
   }
+
   return { ok: true, data: parseInvoice(dto.data) };
 };
 ```
@@ -208,16 +215,18 @@ export const errorCopy: Record<ErrorKey, string> = {
 ## 7. Server actions and route handlers
 
 ```ts
-// actions/submit-contact.ts
 'use server';
 
+// actions/submit-contact.ts
 import { http, type SharedErrorKey } from '@/lib/http';
 import type { Result } from '@/types/result';
 import { contactSchema, type ContactValues } from '@/features/contact/lib/contact-schema';
 
 export type ContactErrorKey = SharedErrorKey | 'CONTACT_INVALID' | 'CONTACT_SUBMIT_FAILED';
 
-export const submitContact = async (values: ContactValues): Promise<Result<null, ContactErrorKey>> => {
+export const submitContact = async (
+  values: ContactValues,
+): Promise<Result<null, ContactErrorKey>> => {
   const parsed = contactSchema.safeParse(values); // the client is untrusted, even our own form
   if (!parsed.success) return { ok: false, errorKey: 'CONTACT_INVALID' };
 
@@ -226,6 +235,7 @@ export const submitContact = async (values: ContactValues): Promise<Result<null,
     body: parsed.data,
     fallbackKey: 'CONTACT_SUBMIT_FAILED',
   });
+
   return res.ok ? { ok: true, data: null } : res;
 };
 ```
@@ -241,7 +251,9 @@ export const POST = async (request: Request) => {
   if (!session) return Response.json({ ok: false, errorKey: 'UNAUTHORIZED' }, { status: 401 });
 
   const body = orderSchema.safeParse(await request.json().catch(() => null));
-  if (!body.success) return Response.json({ ok: false, errorKey: 'ORDER_INVALID' }, { status: 400 });
+  if (!body.success) {
+    return Response.json({ ok: false, errorKey: 'ORDER_INVALID' }, { status: 400 });
+  }
 
   return Response.json(await createOrder(session.userId, body.data));
 };

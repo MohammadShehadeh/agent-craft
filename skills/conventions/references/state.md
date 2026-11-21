@@ -105,8 +105,11 @@ const [isPending, startTransition] = useTransition();
 const handleToggle = (next: boolean) =>
   startTransition(async () => {
     setOptimisticFavorite(next);
-    const result = await toggleFavorite(thread.id, next); // the action revalidates thread.isFavorite
-    if (!result.ok) toast.error(errorCopy[result.errorKey]); // the transition ends without a commit, so React reverts
+
+    // Success: the action revalidates thread.isFavorite.
+    // Failure: the transition ends without a commit, so React reverts.
+    const result = await toggleFavorite(thread.id, next);
+    if (!result.ok) toast.error(errorCopy[result.errorKey]);
   });
 ```
 
@@ -118,7 +121,7 @@ const handleToggle = (next: boolean) =>
 
 ## Context
 
-Use context for state many descendants of a subtree read (session, theme, an active checkout), not to skip one level of props. Each context is written out in its own file, with a guard in its hook:
+Use context for state many descendants of a subtree read (session, theme, an active checkout), not to skip one level of props. Each context is written out in its own file, with a guard in its hook (a compound component's context is private to its file, `components.md`):
 
 ```tsx
 const CheckoutContext = createContext<CheckoutContextValue | null>(null);

@@ -25,15 +25,15 @@ Skills load on their own when a task matches; the two marked with a slash comman
 
 | Path | What it holds |
 | --- | --- |
-| `skills/conventions/SKILL.md` | The red lines, the Power of Ten rules, how to work, tests, and a map of where every other rule lives |
+| `skills/conventions/SKILL.md` | The red lines, reading shape (dependency order, paragraphs, braces), the Power of Ten rules, how to work, tests, and a map of where every other rule lives |
 | `skills/conventions/references/typescript.md` | Naming and types |
-| `skills/conventions/references/components.md` | Components, flat trees, client boundaries, shadcn/ui, styling, icons, accessibility, UX states |
+| `skills/conventions/references/components.md` | Components, compound components, flat trees, client boundaries, shadcn/ui, styling, icons, accessibility, UX states |
 | `skills/conventions/references/state.md` | Hooks, status unions, the query cache, list derivations, formatting, optimistic UI, context |
 | `skills/conventions/references/review-checklist.md` | The review checks, in order, and the output format |
 | `skills/service/` | `http` client, `Result`, error keys, parsing, server actions, route handlers, env |
 | `skills/form/` | Forms: schema first, controls, Field markup, submit |
 | `skills/nextjs-page/` | Pages, sections, routing, metadata |
-| `skills/feature/` | Feature planning, folder layout, packages |
+| `skills/feature/` | Feature planning, folder layout and boundaries, packages |
 | `skills/component/` | Designing a new component |
 | `skills/debug/` | Reproduce → localize → trace → blast radius → verify |
 | `skills/plan/` | `/agent-craft:plan <task>`: verifiable targets and done criteria before code |

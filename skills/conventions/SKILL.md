@@ -12,7 +12,35 @@ The rules in this file apply to every line of code. Each topic rule is written i
 - **Traceability budget: two files.** A reader understands a function or component by opening at most two other files. Shared infrastructure the whole repo uses (`Result`, the `http` client, `env`, `cn`, error copy, UI primitives) doesn't count. Over budget means the structure is wrong: inline it, colocate it, or pass the data directly.
 - **Duplication over the wrong abstraction.** Two similar blocks are fine. A function that needs a flag, an options bag, or a type parameter to serve two callers is two functions. Moving existing code to a shared file when a second file imports it is fine; unifying similar code into a new abstraction waits for the third identical case.
 - **Simple over clever.** If a reviewer has to think to see that it works, rewrite it.
-- **Written for humans.** Names say the business meaning (`isEligibleForRenewal`, not `flag2`). Comments say why, never what. A file reads in dependency order: private pieces above the export that uses them, so nothing is read before it's defined. An export and the private pieces only it uses form one group; pieces shared by several groups go above all of them. Inside a function, blank lines separate its steps like paragraphs (validate, calculate, act, return), so its shape shows before any line is read.
+- **Written for humans.** Names say the business meaning (`isEligibleForRenewal`, not `flag2`). Comments say why, never what.
+- **Focused directories, focused files.** Every directory and file has one job its name states, and a boundary you can see in the import path. The layout rules are in the `agent-craft:feature` skill.
+
+## Reading shape
+
+- **Dependency order.** A file reads top to bottom with nothing used before it's defined: private pieces above the export that uses them. An export and the private pieces only it uses form one group; pieces shared by several groups go above all of them.
+- **Paragraphs.** A function body is written in paragraphs, one per step: guard, load, decide, act, return. One blank line between steps, none inside a step, never two in a row. A guard sits in the paragraph of the value it checks. The final `return` is its own paragraph unless the whole function is one step. The shape of the function shows before any line is read.
+- **Braces follow the line.** An `if`, `for`, or `while` that fits on one line, condition and statement together, takes no braces: `if (!session) return unauthorized;`. Everything else takes braces: a body of two or more statements, or one statement too long to share the line with its condition. A body never sits unbraced on the next line. An `if`/`else` chain is all braced or all unbraced. Enforce it with ESLint `curly: ['error', 'multi-line', 'consistent']`.
+
+```ts
+export const archiveMessage = async (messageId: string): Promise<Result<null, ArchiveErrorKey>> => {
+  const session = await getSession();
+  if (!session) return { ok: false, errorKey: 'UNAUTHORIZED' };
+
+  const message = await fetchMessage(messageId);
+  if (!message.ok) return message;
+  if (message.data.ownerId !== session.userId) return { ok: false, errorKey: 'ARCHIVE_FORBIDDEN' };
+
+  if (message.data.isArchived) {
+    revalidatePath('/inbox');
+    return { ok: true, data: null };
+  }
+
+  const archived = await saveArchive(messageId);
+  if (archived.ok) revalidatePath('/inbox');
+
+  return archived;
+};
+```
 
 ## NASA's Power of Ten, for TypeScript and React
 
@@ -21,7 +49,7 @@ Gerard Holzmann's rules for safety-critical code at NASA/JPL, adapted from C. Wh
 1. **Simple control flow.** Guard clauses and early returns; the happy path stays unindented and there is no `else` after a `return`. No nested ternaries. No recursion except over data that is itself a bounded tree. Exceptions signal programmer errors, never control flow.
 2. **Every loop, retry, and wait has a fixed bound.** No `while (true)`. A retry has a max attempt count, polling has a stop condition, every request has a timeout, a page-walking loop has a max page count.
 3. **Build once, then don't mutate.** What never changes (`Intl` formatters, zod schemas, lookup maps) is created once at module scope, not per call or per render. Shared data is never mutated: copy, then change (`[...rows].sort(...)`). No module-level `let`.
-4. **A function fits on one screen: 60 lines at most**, components included. Split a longer one by responsibility into private pieces in the same file. Files have no limit; one long cohesive file reads better than five short ones.
+4. **A function fits on one screen: 60 lines at most**, components included. Split a longer one by responsibility into private pieces in the same file. A file holds one concept; when the concept outgrows its file, it becomes a directory (`agent-craft:feature` skill), never a second concept in the same file.
 5. **Check assumptions in code, not in comments.** Untrusted input (request bodies, API responses, URL params, storage) is parsed with zod before use. An invariant is a guard that throws a developer-facing message. A `switch` over a union ends in an exhaustive `never` check.
 6. **Declare everything at the smallest scope.** A value lives in the block that uses it; a helper, type, or constant in the file that uses it; state in the lowest component that owns it; a file in the feature that uses it. Promote one level only when a second consumer appears.
 7. **Check every return value.** Read `result.data` only after `if (!result.ok)`. No floating promises; a promise deliberately not awaited is marked `void`.
@@ -42,7 +70,7 @@ Gerard Holzmann's rules for safety-critical code at NASA/JPL, adapted from C. Wh
 - Use the repo's runner (Vitest + Testing Library when none is set). A test sits next to the file it tests (`invoice.test.ts`).
 - Test decisions (parsers, calculators, query builders), not component wiring. `describe('<subject>')` + `it('should …')`.
 - Keep decisions (pure functions) apart from actions (I/O, state, toasts) so a decision tests without mocks. A decision stays in the file that uses it; it moves to the feature's `lib/` when it needs its own tests or a second consumer.
-- Formatting follows the repo; when unset: single quotes, semicolons, 2-space indent.
+- Formatting follows the repo, except the reading-shape rules above; when unset: single quotes, semicolons, 2-space indent, 100-column lines.
 
 ## Where each rule lives
 
@@ -54,6 +82,6 @@ Gerard Holzmann's rules for safety-critical code at NASA/JPL, adapted from C. Wh
 | build a form | the `agent-craft:form` skill |
 | call an API, DB, or SDK; add a server action or route handler; add error keys | the `agent-craft:service` skill |
 | add a page, route, layout, or metadata | the `agent-craft:nextjs-page` skill |
-| start a feature, create a feature folder or package | the `agent-craft:feature` skill |
+| start a feature, create a folder or package, split a file into a directory | the `agent-craft:feature` skill |
 | investigate a bug | the `agent-craft:debug` skill |
 | review a diff | `references/review-checklist.md` |

@@ -23,7 +23,7 @@ The steps for designing a new component. The rules it must follow live in `agent
 ## 2. Props API
 
 - Only the props today's callers need, and only the fields the component reads.
-- `children` or slot props over configuration props; compound parts only when callers arrange several slots.
+- `children` or slot props over configuration props; compound parts only when callers arrange several slots (`components.md` → compound components).
 - Variants are one typed union prop.
 - State stays with its owner: the component receives values and emits `on*` callbacks. It doesn't fetch or hold state its siblings also need.
 
@@ -35,7 +35,7 @@ Server component unless it needs interactivity; then `'use client'` on this leaf
 
 - One kebab-case file colocated with its feature, in dependency order: private pieces first, then the props interface and exported component.
 - Composition, styling, icons, and accessibility per `components.md`.
-- Over 60 lines: split into private sub-components in the same file.
+- Over 60 lines: split into private sub-components in the same file. When the file outgrows itself, it becomes a concept directory (`agent-craft:feature` skill → folder layout).
 
 ## 5. Verify
 

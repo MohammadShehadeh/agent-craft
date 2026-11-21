@@ -15,7 +15,7 @@ Every Next.js routing and metadata rule lives here. Load `agent-craft:convention
 
 ## 1. The page
 
-A thin server component, `export default function` (Next.js requires the default export):
+A thin server component, a named arrow-function `const` with a default export (Next.js requires it):
 
 ```tsx
 // app/(marketing)/page.tsx
@@ -25,14 +25,18 @@ export const metadata = buildPageMetadata({
   path: '/pricing',
 });
 
-export default function PricingPage() {
-  return (
-    <>
-      <section><PricingHero /></section>
-      <section><PricingTable /></section>
-    </>
-  );
-}
+const PricingPage = () => (
+  <>
+    <section>
+      <PricingHero />
+    </section>
+    <section>
+      <PricingTable />
+    </section>
+  </>
+);
+
+export default PricingPage;
 ```
 
 Wrap sections in the repo's layout or container component when one exists.
